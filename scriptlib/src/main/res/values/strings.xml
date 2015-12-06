@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ScriptLib</string>
+    <string name="permission_description">Import scripts into LL
+    </string>
+    <string name="permission_label">LL Import Scripts</string>
+    <string name="text_noPermission">This does not work without Permission IMPORT_SCRIPTS.</string>
+</resources>
