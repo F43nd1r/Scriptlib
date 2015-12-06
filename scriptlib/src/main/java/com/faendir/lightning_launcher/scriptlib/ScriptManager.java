@@ -12,6 +12,7 @@ import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.RawRes;
 import android.util.Log;
 
 import java.io.IOException;
@@ -55,6 +56,15 @@ final public class ScriptManager {
     private static boolean debug = false;
     private static boolean askForInstallation = true;
 
+    /**
+     * loads (or updates) a script into LL
+     *
+     * @param context  Context of calling class
+     * @param code     Code of the script
+     * @param name     Name of the script
+     * @param flags    Flags of the script, has to be a sum of: 0=None, 1=Disabled, 2=AppMenu, 4=ItemMenu, 8=CustomMenu
+     * @param listener Gets called when the load process is completed
+     */
     public static void loadScript(@NonNull Context context, @NonNull String code, @NonNull String name, int flags, @NonNull final Listener listener) {
         loadScript(context, code, name, flags, true, listener);
     }
@@ -83,11 +93,32 @@ final public class ScriptManager {
         context.startActivity(intent);
     }
 
-    public static void loadScript(@NonNull Context context, int codeResourceId, @NonNull String name, int flags, @NonNull final Listener listener) throws IOException {
+    /**
+     * loads (or updates) a script into LL
+     *
+     * @param context        Context of calling class
+     * @param codeResourceId Resource ID for a raw file containing the script code
+     * @param name           Name of the script
+     * @param flags          Flags of the script, has to be a sum of: 0=None, 1=Disabled, 2=AppMenu, 4=ItemMenu, 8=CustomMenu
+     * @param listener       Gets called when the load process is completed
+     * @throws IOException if the resource could not be loaded
+     */
+    public static void loadScript(@NonNull Context context, @RawRes int codeResourceId, @NonNull String name, int flags, @NonNull final Listener listener) throws IOException {
         loadScript(context, codeResourceId, name, flags, true, listener);
     }
 
-    public static void loadScript(@NonNull Context context, int codeResourceId, @NonNull String name, int flags, boolean forceUpdate, @NonNull final Listener listener) throws IOException {
+    /**
+     * loads (or updates) a script into LL
+     *
+     * @param context        Context of calling class
+     * @param codeResourceId Resource ID for a raw file containing the script code
+     * @param name           Name of the script
+     * @param flags          Flags of the script, has to be a sum of: 0=None, 1=Disabled, 2=AppMenu, 4=ItemMenu, 8=CustomMenu
+     * @param forceUpdate    if false confirmUpdate gets called and asks for confirmation
+     * @param listener       Gets called when the load process is completed
+     * @throws IOException if the resource could not be loaded
+     */
+    public static void loadScript(@NonNull Context context, @RawRes int codeResourceId, @NonNull String name, int flags, boolean forceUpdate, @NonNull final Listener listener) throws IOException {
         InputStream inputStream = context.getResources().openRawResource(codeResourceId);
         byte[] bytes = new byte[inputStream.available()];
         inputStream.read(bytes);
@@ -171,9 +202,10 @@ final public class ScriptManager {
     /**
      * Runs a script in LL (LL opens in the process)
      *
-     * @param context Context of calling class
-     * @param id      ID of the script, usually as returned by a {@link com.faendir.lightning_launcher.scriptlib.ScriptManager.Listener Listener}
-     * @param data    Additional Data passed to the script (Returned by LL.getEvent().getData()). may be null or empty
+     * @param context    Context of calling class
+     * @param id         ID of the script, usually as returned by a {@link com.faendir.lightning_launcher.scriptlib.ScriptManager.Listener Listener}
+     * @param data       Additional Data passed to the script (Returned by LL.getEvent().getData()). may be null or empty
+     * @param background Whether or not the script should be run in the background
      */
     public static void runScript(@NonNull Context context, int id, @Nullable String data, boolean background) {
         LOGGER.log("runScript call");
@@ -224,15 +256,28 @@ final public class ScriptManager {
         context.startActivity(intent);
     }
 
+    /**
+     * enables extensive logging
+     */
     public static void enableDebug() {
         debug = true;
     }
 
+    /**
+     * set if the library should ask for the repository importer if it is missing (default is true)
+     *
+     * @param value the value
+     */
     public static void askForRepositoryImporterInstallationIfMissing(boolean value) {
         askForInstallation = value;
     }
 
-    public static void replaceLogger(Logger logger){
+    /**
+     * replace the built in Logger with a custom one (also enables debugging)
+     *
+     * @param logger the logger which should replace the current one
+     */
+    public static void replaceLogger(Logger logger) {
         LOGGER = logger;
         enableDebug();
     }
@@ -252,10 +297,16 @@ final public class ScriptManager {
         }
     }
 
+    /**
+     * a Callback that is run if a script does already exists in the launcher and forceUpdate is false.
+     */
     public static abstract class UpdateCallback {
         public abstract void callback(Context context, boolean update);
     }
 
+    /**
+     * A logger which outputs to androids default console
+     */
     public static class Logger {
 
         void log(String msg) {

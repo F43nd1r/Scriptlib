@@ -1,5 +1,29 @@
 apply plugin: 'com.android.library'
 
+ext {
+    bintrayRepo = 'maven'
+    bintrayName = 'scriptlib'
+
+    publishedGroupId = 'com.faendir.lightninglauncher'
+    libraryName = 'scriptlib'
+    artifact = 'scriptlib'
+
+    libraryDescription = 'Allows to import scripts directly into Lightning Launcher'
+
+    siteUrl = 'https://github.com/F43nd1r/Scriptlib'
+    gitUrl = 'https://github.com/F43nd1r/Scriptlib.git'
+
+    libraryVersion = '1.6.4'
+
+    developerId = 'f43nd1r'
+    developerName = 'Lukas Morawietz'
+    developerEmail = 'lukas.morawietz@gmail.com'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
+
 android {
     compileSdkVersion 23
     buildToolsVersion "21.1.2"
@@ -7,8 +31,8 @@ android {
     defaultConfig {
         minSdkVersion 9
         targetSdkVersion 23
-        versionCode 10
-        versionName "1.6.2"
+        versionCode 11
+        versionName "1.6.4"
     }
     buildTypes {
         release {
@@ -18,8 +42,16 @@ android {
     }
 }
 
+configurations {
+    javadocDeps
+}
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:support-annotations:23.1.1'
+    javadocDeps 'com.android.support:support-annotations:23.1.1'
 }
+
+
+apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
+apply from: 'bintrayv1.gradle'
 
