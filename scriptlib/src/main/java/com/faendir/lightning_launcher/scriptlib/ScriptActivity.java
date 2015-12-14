@@ -49,6 +49,7 @@ public class ScriptActivity extends Activity {
             }
         } else if (intent.hasExtra(ScriptManager.CODE) && intent.hasExtra(ScriptManager.NAME)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && checkSelfPermission(PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+                ScriptManager.LOGGER.log("Requesting permission...");
                 requestPermissions(new String[]{PERMISSION}, 0);
                 allowFinish = false;
             } else load();
@@ -60,9 +61,11 @@ public class ScriptActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            ScriptManager.LOGGER.log("Permission granted");
             load();
         } else {
             Toast.makeText(this, R.string.text_noPermission, Toast.LENGTH_LONG).show();
+            ScriptManager.LOGGER.log("Permission denied");
         }
         finish();
     }

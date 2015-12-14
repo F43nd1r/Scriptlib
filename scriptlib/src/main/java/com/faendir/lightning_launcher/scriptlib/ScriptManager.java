@@ -119,6 +119,7 @@ final public class ScriptManager {
      * @throws IOException if the resource could not be loaded
      */
     public static void loadScript(@NonNull Context context, @RawRes int codeResourceId, @NonNull String name, int flags, boolean forceUpdate, @NonNull final Listener listener) throws IOException {
+        LOGGER.log("Loading script from raw resource");
         InputStream inputStream = context.getResources().openRawResource(codeResourceId);
         byte[] bytes = new byte[inputStream.available()];
         inputStream.read(bytes);
@@ -128,7 +129,7 @@ final public class ScriptManager {
     }
 
     static void respondTo(int listenerId, int scriptId) {
-        LOGGER.log("Received positive response");
+        LOGGER.log("Received positive response (ID = " + scriptId + ")");
         LOGGER.log("Forwarding response to caller...");
         listeners.get(listenerId).OnLoadFinished(scriptId);
     }
@@ -215,10 +216,16 @@ final public class ScriptManager {
         i.putExtra("a", 35);
         i.putExtra("d", id + "/" + (data != null ? data : ""));
         i.putExtra(BACKGROUND, background);
-        LOGGER.log("Running script...");
         sendIntentToLauncher(context, i);
     }
 
+    /**
+     * Runs a script in LL (LL opens in the process)
+     *
+     * @param context Context of calling class
+     * @param id      ID of the script, usually as returned by a {@link com.faendir.lightning_launcher.scriptlib.ScriptManager.Listener Listener}
+     * @param data    Additional Data passed to the script (Returned by LL.getEvent().getData()). may be null or empty
+     */
     public static void runScript(@NonNull Context context, int id, @Nullable String data) {
         runScript(context, id, data, false);
     }
@@ -231,28 +238,37 @@ final public class ScriptManager {
      * @param intent  The intent to send
      */
     public static void sendIntentToLauncher(@NonNull Context context, @NonNull Intent intent) {
+        LOGGER.log("Sending intent to Launcher...");
         if (intent.getPackage() == null) {
             intent.setPackage(COMPONENTNAME.getPackageName());
+            LOGGER.log("Added missing package name");
         }
         if (intent.getComponent() == null || intent.getComponent().getClassName() == null) {
             ComponentName componentName = new ComponentName(intent.getPackage(), COMPONENTNAME.getClassName());
             intent.setComponent(componentName);
+            LOGGER.log("Added missing class");
         }
+        LOGGER.log("Resolving service...");
         Intent service = new Intent(INTENT);
         ResolveInfo info = context.getPackageManager().resolveService(service, 0);
         if (info != null) {
+            LOGGER.log("Service resolved");
             try {
                 PackageInfo packageInfo = context.getPackageManager().getPackageInfo(info.serviceInfo.packageName, 0);
                 if (packageInfo.versionCode >= 22) {
+                    LOGGER.log("Service version high enough: Script can be run in background");
                     service.setClassName(info.serviceInfo.packageName, info.serviceInfo.name);
                     service.putExtra(FORWARD, intent);
+                    LOGGER.log("Running script...");
                     context.startService(service);
                     return;
                 }
             } catch (PackageManager.NameNotFoundException ignored) {
             }
         }
+        LOGGER.log("Service not resolved or too low version: Script can NOT be run in background");
         //legacy and fallback
+        LOGGER.log("Running script...");
         context.startActivity(intent);
     }
 
@@ -270,16 +286,17 @@ final public class ScriptManager {
      */
     public static void askForRepositoryImporterInstallationIfMissing(boolean value) {
         askForInstallation = value;
+        LOGGER.log("ask for installation mode set to: " + String.valueOf(value));
     }
 
     /**
-     * replace the built in Logger with a custom one (also enables debugging)
+     * replace the built in Logger with a custom one
      *
      * @param logger the logger which should replace the current one
      */
     public static void replaceLogger(Logger logger) {
         LOGGER = logger;
-        enableDebug();
+        LOGGER.log("Logger replaced");
     }
 
     /**
@@ -305,7 +322,7 @@ final public class ScriptManager {
     }
 
     /**
-     * A logger which outputs to androids default console
+     * A logger which outputs to androids default console if in debug mode
      */
     public static class Logger {
 
