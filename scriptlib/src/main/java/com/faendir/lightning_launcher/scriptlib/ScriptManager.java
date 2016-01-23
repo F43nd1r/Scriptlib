@@ -25,11 +25,11 @@ import java.util.Map;
  *
  * @author Lukas Morawietz
  */
-final public class ScriptManager {
+public final class ScriptManager {
     private ScriptManager() {
     }
 
-    static Logger LOGGER = new Logger();
+    static Logger logger = new Logger();
 
     static final String CODE = "code";
     static final String NAME = "name";
@@ -37,6 +37,7 @@ final public class ScriptManager {
     static final String LOADED_SCRIPT_ID = "loadedScriptId";
     static final String LISTENER_ID = "listenerId";
     static final String FORCE_UPDATE = "forceUpdate";
+    static final String SERVICE_INTENT = "intent";
     private static final String FORWARD = "forward";
     private static final String BACKGROUND = "background";
 
@@ -50,7 +51,7 @@ final public class ScriptManager {
     private static final Uri URI = Uri.parse("market://details?id=com.trianguloy.llscript.repository");
     private static final ComponentName COMPONENTNAME = ComponentName.unflattenFromString("net.pierrox.lightning_launcher_extreme/net.pierrox.lightning_launcher.activities.Dashboard");
 
-    private static final Map<Integer, Listener> listeners = new HashMap<>();
+    private static final Map<Integer, Listener> LISTENERS = new HashMap<>();
     private static int nextListenerIndex = 0;
 
     private static boolean debug = false;
@@ -80,8 +81,8 @@ final public class ScriptManager {
      * @param listener    Gets called when the load process is completed
      */
     public static void loadScript(@NonNull Context context, @NonNull String code, @NonNull String name, int flags, boolean forceUpdate, @NonNull final Listener listener) {
-        LOGGER.log("LoadScript call");
-        listeners.put(nextListenerIndex, listener);
+        logger.log("LoadScript call");
+        LISTENERS.put(nextListenerIndex, listener);
         Intent intent = new Intent(context, ScriptActivity.class);
         intent.putExtra(CODE, code);
         intent.putExtra(NAME, name);
@@ -89,7 +90,7 @@ final public class ScriptManager {
         intent.putExtra(LISTENER_ID, nextListenerIndex);
         intent.putExtra(FORCE_UPDATE, forceUpdate);
         nextListenerIndex++;
-        LOGGER.log("Starting Activity for communication...");
+        logger.log("Starting Activity for communication...");
         context.startActivity(intent);
     }
 
@@ -119,7 +120,7 @@ final public class ScriptManager {
      * @throws IOException if the resource could not be loaded
      */
     public static void loadScript(@NonNull Context context, @RawRes int codeResourceId, @NonNull String name, int flags, boolean forceUpdate, @NonNull final Listener listener) throws IOException {
-        LOGGER.log("Loading script from raw resource");
+        logger.log("Loading script from raw resource");
         InputStream inputStream = context.getResources().openRawResource(codeResourceId);
         byte[] bytes = new byte[inputStream.available()];
         inputStream.read(bytes);
@@ -129,73 +130,73 @@ final public class ScriptManager {
     }
 
     static void respondTo(int listenerId, int scriptId) {
-        LOGGER.log("Received positive response (ID = " + scriptId + ")");
-        LOGGER.log("Forwarding response to caller...");
-        listeners.get(listenerId).OnLoadFinished(scriptId);
+        logger.log("Received positive response (ID = " + scriptId + ")");
+        logger.log("Forwarding response to caller...");
+        LISTENERS.get(listenerId).onLoadFinished(scriptId);
     }
 
     static void notifyError(int listenerId) {
-        LOGGER.log("Received error");
-        LOGGER.log("Notifying caller of Error...");
-        listeners.get(listenerId).OnError();
+        logger.log("Received error");
+        logger.log("Notifying caller of Error...");
+        LISTENERS.get(listenerId).onError();
     }
 
-    static void updateConfirmation(final int listenerId, final Intent intent) {
-        LOGGER.log("Received request to confirm Update");
-        LOGGER.log("Trying to ask Caller whether to update or not...");
-        listeners.get(listenerId).confirmUpdate(new UpdateCallback() {
+    static void updateConfirmation(final int listenerId, @NonNull final Intent intent) {
+        logger.log("Received request to confirm Update");
+        logger.log("Trying to ask Caller whether to update or not...");
+        LISTENERS.get(listenerId).confirmUpdate(new UpdateCallback() {
             @Override
-            public void callback(Context context, boolean update) {
-                LOGGER.log("caller responded - force Update: " + update);
+            public void callback(@NonNull Context context, boolean update) {
+                logger.log("caller responded - force Update: " + update);
                 if (update) {
-                    LOGGER.log("Performing Update by loading again...");
-                    loadScript(context, intent.getStringExtra(CODE), intent.getStringExtra(NAME), (int) intent.getDoubleExtra(FLAGS, 0), true, listeners.get(listenerId));
+                    logger.log("Performing Update by loading again...");
+                    loadScript(context, intent.getStringExtra(CODE), intent.getStringExtra(NAME), (int) intent.getDoubleExtra(FLAGS, 0), true, LISTENERS.get(listenerId));
                 }
             }
         });
     }
 
 
-    static void loadScriptInternal(final Activity context, int listenerId, String code, String name, int flags, boolean forceUpdate) {
-        LOGGER.log("Resolving service...");
+    static void loadScriptInternal(@NonNull final Activity context, int listenerId, String code, String name, int flags, boolean forceUpdate) {
+        logger.log("Resolving service...");
         Intent intent = new Intent(INTENT);
         ResolveInfo info = context.getPackageManager().resolveService(intent, 0);
         if (info == null) {
-            LOGGER.log("Service not resolved: Repository Importer seems to be missing");
-            LOGGER.log("Notifying caller of Error");
-            listeners.get(listenerId).OnError();
+            logger.log("Service not resolved: Repository Importer seems to be missing");
+            logger.log("Notifying caller of Error");
+            LISTENERS.get(listenerId).onError();
             if (askForInstallation) {
-                LOGGER.log("Asking user to install...");
+                logger.log("Asking user to install...");
                 new AlertDialog.Builder(context)
                         .setTitle("Repository Importer missing")
                         .setMessage("This action requires the Repository Importer to be installed. Do you wish to install it?")
                         .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
                             @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                LOGGER.log("User denied install");
+                            public void onClick(@NonNull DialogInterface dialogInterface, int i) {
+                                logger.log("User denied install");
                                 dialogInterface.dismiss();
                             }
                         })
                         .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                             @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                LOGGER.log("User agreed to install");
+                            public void onClick(@NonNull DialogInterface dialogInterface, int i) {
+                                logger.log("User agreed to install");
                                 dialogInterface.dismiss();
-                                LOGGER.log("Forwarding to Play Store...");
+                                logger.log("Forwarding to Play Store...");
                                 context.startActivity(new Intent(Intent.ACTION_VIEW, URI));
                             }
                         })
                         .show();
             }
         } else {
-            LOGGER.log("Service resolved");
+            logger.log("Service resolved");
             intent.setClassName(info.serviceInfo.packageName, info.serviceInfo.name);
             intent.putExtra(CODE, code);
             intent.putExtra(NAME, name);
             intent.putExtra(FLAGS, flags);
             intent.putExtra(RECEIVER, context.getComponentName().flattenToString());
             intent.putExtra(FORCE_UPDATE, forceUpdate);
-            LOGGER.log("Calling Repository Importer...");
+            logger.log("Calling Repository Importer...");
             context.startService(intent);
         }
     }
@@ -209,7 +210,7 @@ final public class ScriptManager {
      * @param background Whether or not the script should be run in the background
      */
     public static void runScript(@NonNull Context context, int id, @Nullable String data, boolean background) {
-        LOGGER.log("runScript call");
+        logger.log("runScript call");
         Intent i = new Intent(Intent.ACTION_VIEW);
         i.setComponent(COMPONENTNAME);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -238,37 +239,39 @@ final public class ScriptManager {
      * @param intent  The intent to send
      */
     public static void sendIntentToLauncher(@NonNull Context context, @NonNull Intent intent) {
-        LOGGER.log("Sending intent to Launcher...");
+        logger.log("Sending intent to Launcher...");
         if (intent.getPackage() == null) {
             intent.setPackage(COMPONENTNAME.getPackageName());
-            LOGGER.log("Added missing package name");
+            logger.log("Added missing package name");
         }
         if (intent.getComponent() == null || intent.getComponent().getClassName() == null) {
             ComponentName componentName = new ComponentName(intent.getPackage(), COMPONENTNAME.getClassName());
             intent.setComponent(componentName);
-            LOGGER.log("Added missing class");
+            logger.log("Added missing class");
         }
-        LOGGER.log("Resolving service...");
+        logger.log("Resolving service...");
         Intent service = new Intent(INTENT);
         ResolveInfo info = context.getPackageManager().resolveService(service, 0);
         if (info != null) {
-            LOGGER.log("Service resolved");
+            logger.log("Service resolved");
             try {
                 PackageInfo packageInfo = context.getPackageManager().getPackageInfo(info.serviceInfo.packageName, 0);
                 if (packageInfo.versionCode >= 22) {
-                    LOGGER.log("Service version high enough: Script can be run in background");
+                    logger.log("Service version high enough: Script can be run in background");
                     service.setClassName(info.serviceInfo.packageName, info.serviceInfo.name);
                     service.putExtra(FORWARD, intent);
-                    LOGGER.log("Running script...");
-                    context.startService(service);
+                    logger.log("Forwarding...");
+                    Intent activity = new Intent(context, ScriptActivity.class);
+                    activity.putExtra(SERVICE_INTENT, service);
+                    context.startActivity(activity);
                     return;
                 }
             } catch (PackageManager.NameNotFoundException ignored) {
             }
         }
-        LOGGER.log("Service not resolved or too low version: Script can NOT be run in background");
+        logger.log("Service not resolved or too low version: Script can NOT be run in background");
         //legacy and fallback
-        LOGGER.log("Running script...");
+        logger.log("Running script...");
         context.startActivity(intent);
     }
 
@@ -286,7 +289,7 @@ final public class ScriptManager {
      */
     public static void askForRepositoryImporterInstallationIfMissing(boolean value) {
         askForInstallation = value;
-        LOGGER.log("ask for installation mode set to: " + String.valueOf(value));
+        logger.log("ask for installation mode set to: " + value);
     }
 
     /**
@@ -295,18 +298,18 @@ final public class ScriptManager {
      * @param logger the logger which should replace the current one
      */
     public static void replaceLogger(Logger logger) {
-        LOGGER = logger;
-        LOGGER.log("Logger replaced");
+        ScriptManager.logger = logger;
+        ScriptManager.logger.log("Logger replaced");
     }
 
     /**
      * A Listener which gets called when the load process is completed. Used to retrieve the Id of the loaded Script
      */
-    public static abstract class Listener {
-        public abstract void OnLoadFinished(int id);
+    public abstract static class Listener {
+        public abstract void onLoadFinished(int id);
 
-        public void OnError() {
-            LOGGER.log("Caller did not implement onError. Error was ignored");
+        public void onError() {
+            logger.log("Caller did not implement onError. Error was ignored");
         }
 
         public void confirmUpdate(UpdateCallback callback) {
@@ -317,7 +320,7 @@ final public class ScriptManager {
     /**
      * a Callback that is run if a script does already exists in the launcher and forceUpdate is false.
      */
-    public static abstract class UpdateCallback {
+    public abstract static class UpdateCallback {
         public abstract void callback(Context context, boolean update);
     }
 
@@ -327,8 +330,9 @@ final public class ScriptManager {
     public static class Logger {
 
         void log(String msg) {
-            if (debug)
+            if (debug) {
                 Log.d("[SCRIPTLIB]", msg);
+            }
         }
     }
 }

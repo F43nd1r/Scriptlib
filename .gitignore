@@ -6,3 +6,8 @@
 /build
 /app
 /.idea
+.idea.bak/.name
+.idea.bak/copyright/profiles_settings.xml
+.idea.bak/compiler.xml
+.idea.bak/encodings.xml
+.idea.bak/gradle.xml
