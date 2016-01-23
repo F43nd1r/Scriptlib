@@ -110,7 +110,7 @@ public final class ScriptActivity extends Activity {
 
     private void invalidCall() {
         ScriptManager.logger.log("Intent was invalid.");
-        throw new UnsupportedOperationException("You should not call this Activity at all.");
+        throw new UnsupportedOperationException("You should not call this Activity manually.");
     }
 
     private boolean requestPermission(int id) {

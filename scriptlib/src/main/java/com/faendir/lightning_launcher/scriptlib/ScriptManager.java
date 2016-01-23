@@ -25,6 +25,7 @@ import java.util.Map;
  *
  * @author Lukas Morawietz
  */
+@SuppressWarnings("unused")
 public final class ScriptManager {
     private ScriptManager() {
     }
@@ -54,7 +55,6 @@ public final class ScriptManager {
     private static final Map<Integer, Listener> LISTENERS = new HashMap<>();
     private static int nextListenerIndex = 0;
 
-    private static boolean debug = false;
     private static boolean askForInstallation = true;
 
     /**
@@ -122,29 +122,36 @@ public final class ScriptManager {
     public static void loadScript(@NonNull Context context, @RawRes int codeResourceId, @NonNull String name, int flags, boolean forceUpdate, @NonNull final Listener listener) throws IOException {
         logger.log("Loading script from raw resource");
         InputStream inputStream = context.getResources().openRawResource(codeResourceId);
-        byte[] bytes = new byte[inputStream.available()];
-        inputStream.read(bytes);
+        byte[] bytes = new byte[1024];
+        StringBuilder builder = new StringBuilder(inputStream.available());
+        int count;
+        while ((count = inputStream.read(bytes)) > 0){
+            builder.append(new String(bytes,0,count));
+        }
         inputStream.close();
-        String code = new String(bytes);
+        String code = builder.toString();
         loadScript(context, code, name, flags, forceUpdate, listener);
     }
 
     static void respondTo(int listenerId, int scriptId) {
         logger.log("Received positive response (ID = " + scriptId + ")");
         logger.log("Forwarding response to caller...");
-        LISTENERS.get(listenerId).onLoadFinished(scriptId);
+        Listener listener = LISTENERS.get(listenerId);
+        if (listener != null) listener.onLoadFinished(scriptId);
     }
 
     static void notifyError(int listenerId) {
         logger.log("Received error");
         logger.log("Notifying caller of Error...");
-        LISTENERS.get(listenerId).onError();
+        Listener listener = LISTENERS.get(listenerId);
+        if (listener != null) listener.onError();
     }
 
     static void updateConfirmation(final int listenerId, @NonNull final Intent intent) {
         logger.log("Received request to confirm Update");
         logger.log("Trying to ask Caller whether to update or not...");
-        LISTENERS.get(listenerId).confirmUpdate(new UpdateCallback() {
+        Listener listener = LISTENERS.get(listenerId);
+        if (listener != null) listener.confirmUpdate(new UpdateCallback() {
             @Override
             public void callback(@NonNull Context context, boolean update) {
                 logger.log("caller responded - force Update: " + update);
@@ -164,7 +171,8 @@ public final class ScriptManager {
         if (info == null) {
             logger.log("Service not resolved: Repository Importer seems to be missing");
             logger.log("Notifying caller of Error");
-            LISTENERS.get(listenerId).onError();
+            Listener listener = LISTENERS.get(listenerId);
+            if (listener != null) listener.onError();
             if (askForInstallation) {
                 logger.log("Asking user to install...");
                 new AlertDialog.Builder(context)
@@ -279,7 +287,7 @@ public final class ScriptManager {
      * enables extensive logging
      */
     public static void enableDebug() {
-        debug = true;
+        logger.setDebug(true);
     }
 
     /**
@@ -328,11 +336,20 @@ public final class ScriptManager {
      * A logger which outputs to androids default console if in debug mode
      */
     public static class Logger {
+        private boolean debug = false;
 
-        void log(String msg) {
+        final void log(String msg) {
             if (debug) {
                 Log.d("[SCRIPTLIB]", msg);
             }
+        }
+
+        void setDebug(boolean debug) {
+            this.debug = debug;
+        }
+
+        boolean getDebug() {
+            return debug;
         }
     }
 }
