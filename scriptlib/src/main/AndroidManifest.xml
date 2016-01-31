@@ -12,6 +12,10 @@
             android:name="ScriptActivity"
             android:exported="true"
             android:theme="@style/Transparent"/>
+        <activity
+            android:name="PermissionActivity"
+            android:theme="@style/Transparent" >
+        </activity>
     </application>
 
 </manifest>

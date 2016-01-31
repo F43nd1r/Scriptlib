@@ -6,9 +6,9 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.widget.Toast;
 
 
+@Deprecated
 public final class ScriptActivity extends Activity {
     private static final String PERMISSION = "net.pierrox.lightning_launcher.IMPORT_SCRIPTS";
     private static final int ID_IMPORT = 1;
@@ -40,7 +40,7 @@ public final class ScriptActivity extends Activity {
                     break;
                 case ScriptManager.STATUS_LAUNCHER_PROBLEM:
                     ScriptManager.logger.log("Repository Importer answered with Status LAUNCHER_PROBLEM");
-                    ScriptManager.notifyError(respondTo);
+                    ScriptManager.notifyError(this, respondTo, ErrorCode.LAUNCHER_PROBLEM);
                     break;
                 case ScriptManager.STATUS_UPDATE_CONFIRMATION_REQUIRED:
                     ScriptManager.logger.log("Repository Importer answered with Status UPDATE_CONFIRMATION_REQUIRED");
@@ -50,11 +50,7 @@ public final class ScriptActivity extends Activity {
                     invalidCall();
             }
         } else if (intent.hasExtra(ScriptManager.CODE) && intent.hasExtra(ScriptManager.NAME)) {
-            if (requestPermission(ID_IMPORT)) {
-                loadImport();
-            } else {
-                allowFinish = false;
-            }
+            allowFinish = requestPermission(ID_IMPORT) && loadImport();
         } else if (intent.hasExtra((ScriptManager.SERVICE_INTENT))) {
             if (requestPermission(ID_RUN)) {
                 loadRun();
@@ -73,33 +69,36 @@ public final class ScriptActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        boolean allowFinish = true;
         if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             ScriptManager.logger.log("Permission granted");
             switch (requestCode) {
                 case ID_IMPORT:
-                    loadImport();
+                    allowFinish = loadImport();
                     break;
                 case ID_RUN:
                     loadRun();
                     break;
             }
         } else {
-            Toast.makeText(this, R.string.text_noPermission, Toast.LENGTH_LONG).show();
-            ScriptManager.logger.log("Permission denied");
+            ScriptManager.permissionNotGranted(this, respondTo);
         }
-        finish();
+        if (allowFinish) {
+            finish();
+        }
     }
 
-    private void loadImport() {
+    private boolean loadImport() {
         ScriptManager.logger.log("Activity started for communication");
         respondTo = intent.getIntExtra(ScriptManager.LISTENER_ID, -1);
         if (respondTo != -1) {
             ScriptManager.logger.log("Initializing communication request");
-            ScriptManager.loadScriptInternal(this, respondTo, intent.getStringExtra(ScriptManager.CODE),
+            return ScriptManager.loadScriptInternal(this, respondTo, intent.getStringExtra(ScriptManager.CODE),
                     intent.getStringExtra(ScriptManager.NAME),
                     intent.getIntExtra(ScriptManager.FLAGS, 0),
                     intent.getBooleanExtra(ScriptManager.FORCE_UPDATE, false));
         }
+        return true;
     }
 
     private void loadRun() {
