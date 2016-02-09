@@ -182,7 +182,7 @@ public final class ScriptManager {
     /**
      * run a script without importing it and receive a result string
      * @param context a context
-     * @param code script code. last line has to be "return <some_string>"
+     * @param code script code. last line has to be "return [some_string]"
      * @param listener gets called when the script was executed. Has to implement {@link Listener#onResult(String)}
      */
     public static void runScriptForResult(@NonNull Context context, @NonNull final String code, final Listener listener) {
