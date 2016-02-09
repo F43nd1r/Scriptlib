@@ -30,6 +30,10 @@ public enum ErrorCode {
     /**
      * Importer rejected the input
      */
-    INVALID_INPUT
+    INVALID_INPUT,
+    /**
+     * Script code was invalid
+     */
+    EVAL_FAILED
 
 }

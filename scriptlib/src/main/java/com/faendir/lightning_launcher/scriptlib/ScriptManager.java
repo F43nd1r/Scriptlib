@@ -26,8 +26,9 @@ import android.util.Pair;
 import android.widget.Toast;
 
 import com.trianguloy.llscript.repository.aidl.Failure;
-import com.trianguloy.llscript.repository.aidl.ICallback;
+import com.trianguloy.llscript.repository.aidl.IImportCallback;
 import com.trianguloy.llscript.repository.aidl.ILightningService;
+import com.trianguloy.llscript.repository.aidl.IResultCallback;
 import com.trianguloy.llscript.repository.aidl.Script;
 
 import java.io.IOException;
@@ -64,7 +65,7 @@ public final class ScriptManager {
      *
      * @param context  Context of calling class
      * @param script   the script
-     * @param listener Gets called when the load process is completed
+     * @param listener Gets called when the load process is completed. Has to implement {@link Listener#onLoadFinished(int)}
      */
     public static void loadScript(@NonNull Context context, @NonNull Script script, @NonNull Listener listener) {
         loadScript(context, script, listener, true);
@@ -75,8 +76,8 @@ public final class ScriptManager {
      *
      * @param context     Context of calling class
      * @param script      the script
-     * @param listener    Gets called when the load process is completed
-     * @param forceUpdate if false Listener has to implement confirmUpdate to resolve conflicts!
+     * @param listener    Gets called when the load process is completed. Has to implement {@link Listener#onLoadFinished(int)}
+     * @param forceUpdate if false Listener has to implement {@link Listener#confirmUpdate(UpdateCallback)} to resolve conflicts!
      */
     public static void loadScript(@NonNull final Context context, @NonNull final Script script, @NonNull final Listener listener, final boolean forceUpdate) {
         logger.log("LoadScript call");
@@ -87,9 +88,9 @@ public final class ScriptManager {
                 public void run(ILightningService service) {
                     try {
                         logger.log("importing into LL...");
-                        service.importScript(script, forceUpdate, new ICallback.Stub() {
+                        service.importScript(script, forceUpdate, new IImportCallback.Stub() {
                             @Override
-                            public void onImportFinished(final int scriptId) throws RemoteException {
+                            public void onFinish(final int scriptId) throws RemoteException {
                                 new Handler(context.getMainLooper()).post(new Runnable() {
                                     @Override
                                     public void run() {
@@ -100,7 +101,7 @@ public final class ScriptManager {
                             }
 
                             @Override
-                            public void onImportFailed(Failure failure) throws RemoteException {
+                            public void onFailure(Failure failure) throws RemoteException {
                                 switch (failure) {
                                     case SCRIPT_ALREADY_EXISTS:
                                         new Handler(context.getMainLooper()).post(new Runnable() {
@@ -176,6 +177,40 @@ public final class ScriptManager {
             runScriptLegacy(context, id, data, background);
         }
 
+    }
+
+    /**
+     * run a script without importing it and receive a result string
+     * @param context a context
+     * @param code script code. last line has to be "return <some_string>"
+     * @param listener gets called when the script was executed. Has to implement {@link Listener#onResult(String)}
+     */
+    public static void runScriptForResult(@NonNull Context context, @NonNull final String code, final Listener listener) {
+        Pair<ServiceInfo, Boolean> pair = getServiceWithMinimumVersion(context, MINIMUM_BIND_VERSION);
+        if (pair.second) {
+            bindServiceAndCall(context, pair.first, listener, new ServiceFunction() {
+                @Override
+                void run(ILightningService service) {
+                    try {
+                        service.runScriptForResult(code, new IResultCallback.Stub() {
+                            @Override
+                            public void onResult(String result) throws RemoteException {
+                                listener.onResult(result);
+                            }
+
+                            @Override
+                            public void onFailure(Failure failure) throws RemoteException {
+                                if (failure == Failure.EVAL_FAILED) {
+                                    listener.onError(ErrorCode.EVAL_FAILED);
+                                }
+                            }
+                        });
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
     }
 
     /**
@@ -408,7 +443,12 @@ public final class ScriptManager {
      * A Listener which gets called when the load process is completed. Used to retrieve the Id of the loaded Script
      */
     public abstract static class Listener {
-        public abstract void onLoadFinished(int id);
+        public void onLoadFinished(int id) {
+        }
+
+        public void onResult(String result) {
+
+        }
 
         public void onError(ErrorCode errorCode) {
             logger.log("Caller did not implement onError. Error was ignored");
