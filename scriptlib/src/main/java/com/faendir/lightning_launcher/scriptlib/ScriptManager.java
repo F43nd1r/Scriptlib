@@ -437,7 +437,7 @@ public final class ScriptManager {
 
     }
 
-    /* Public classes (For extension) */
+    /* Public classes */
 
     /**
      * A Listener which gets called when the load process is completed. Used to retrieve the Id of the loaded Script
@@ -480,16 +480,14 @@ public final class ScriptManager {
         }
     }
 
-    /* Private classes */
-
     /**
      * a Callback that is run if a script does already exists in the launcher and forceUpdate is false.
      */
-    private static class UpdateCallback {
+    public static class UpdateCallback {
         private final Script script;
         private final Listener listener;
 
-        public UpdateCallback(Script script, Listener listener) {
+        private UpdateCallback(Script script, Listener listener) {
             this.script = script;
             this.listener = listener;
         }
@@ -502,6 +500,8 @@ public final class ScriptManager {
             }
         }
     }
+
+    /* Private classes */
 
     private abstract static class ServiceFunction {
         private ServiceConnection connection;
