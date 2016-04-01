@@ -510,6 +510,7 @@ public final class ScriptManager {
         abstract void run(ILightningService service);
 
         void setFinishInfo(Context context, ServiceConnection connection) {
+            this.context = context;
             this.connection = connection;
         }
 
