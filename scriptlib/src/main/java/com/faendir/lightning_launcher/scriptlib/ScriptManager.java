@@ -181,8 +181,9 @@ public final class ScriptManager {
 
     /**
      * run a script without importing it and receive a result string
-     * @param context a context
-     * @param code script code. last line has to be "return [some_string]"
+     *
+     * @param context  a context
+     * @param code     script code. last line has to be "return [some_string]"
      * @param listener gets called when the script was executed. Has to implement {@link Listener#onResult(String)}
      */
     public static void runScriptForResult(@NonNull Context context, @NonNull final String code, final Listener listener) {
@@ -217,11 +218,11 @@ public final class ScriptManager {
      * run an action in LL
      *
      * @param context    a context
-     * @param actionId   ID of the action as defined by LL. See http://www.lightninglauncher.com/scripting/reference/api/reference/net/pierrox/lightning_launcher/script/api/EventHandler.html
+     * @param actionId   ID of the action as defined by LL. {@link Action}
      * @param data       optional data
      * @param background if the action should be executed in background (not all actions make sense in the background)
      */
-    public static void runAction(@NonNull Context context, final int actionId, @Nullable final String data, final boolean background) {
+    public static void runAction(@NonNull Context context, @Action final int actionId, @Nullable final String data, final boolean background) {
         logger.log("runAction call");
         Pair<ServiceInfo, Boolean> pair = getServiceWithMinimumVersion(context, MINIMUM_BIND_VERSION);
         if (pair.second) {
