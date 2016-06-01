@@ -24,16 +24,19 @@ public class PermissionActivity extends Activity {
     private static int nextId = 0;
 
     public static void checkForPermission(@NonNull Context context, String permission, PermissionCallback callback) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
-            int id = nextId++;
-            callbacks.put(id, callback);
-            Intent intent = new Intent(context, PermissionActivity.class);
-            intent.putExtra(ID, id);
-            intent.putExtra(PERMISSION, permission);
-            context.startActivity(intent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+                int id = nextId++;
+                callbacks.put(id, callback);
+                Intent intent = new Intent(context, PermissionActivity.class);
+                intent.putExtra(ID, id);
+                intent.putExtra(PERMISSION, permission);
+                context.startActivity(intent);
+            } else {
+                callback.handlePermissionResult(true);
+            }
         } else {
-            //pre-Marshmallow Android grants all permissions on install.
-            callback.handlePermissionResult(true);
+            callback.handlePermissionResult(context.checkCallingOrSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
         }
     }
 
@@ -47,13 +50,8 @@ public class PermissionActivity extends Activity {
         if (intent.hasExtra(ID) && intent.hasExtra(PERMISSION)) {
             id = intent.getIntExtra(ID, -1);
             permission = intent.getStringExtra(PERMISSION);
-            checkForPermission();
+            requestPermission();
         } else finish();
-    }
-
-    @TargetApi(Build.VERSION_CODES.M)
-    private void checkForPermission() {
-        requestPermission();
     }
 
     @TargetApi(Build.VERSION_CODES.M)

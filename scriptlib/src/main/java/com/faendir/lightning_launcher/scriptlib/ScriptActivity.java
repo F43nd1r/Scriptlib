@@ -15,12 +15,14 @@ public final class ScriptActivity extends Activity {
     private static final int ID_RUN = 2;
 
 
+    private LegacyManager legacyManager;
     private int respondTo;
     private Intent intent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        legacyManager = new LegacyManager(new ResponseManager());
         onNewIntent(getIntent());
     }
 
@@ -29,29 +31,29 @@ public final class ScriptActivity extends Activity {
         boolean allowFinish = true;
         this.intent = intent;
         ScriptManager.logger.log("Resolving intent...");
-        if (intent.hasExtra(ScriptManager.STATUS)) {
+        if (intent.hasExtra(LegacyManager.STATUS)) {
             ScriptManager.logger.log("Intent seems to be valid");
-            Object status = intent.getExtras().get(ScriptManager.STATUS);
+            Object status = intent.getExtras().get(LegacyManager.STATUS);
             int code = status instanceof Number ? ((Number) status).intValue() : -1;
             switch (code) {
-                case ScriptManager.STATUS_OK:
+                case LegacyManager.STATUS_OK:
                     ScriptManager.logger.log("Repository Importer answered with Status OK");
-                    ScriptManager.respondTo(respondTo, (int) intent.getDoubleExtra(ScriptManager.LOADED_SCRIPT_ID, -1));
+                    legacyManager.respondTo(respondTo, (int) intent.getDoubleExtra(LegacyManager.LOADED_SCRIPT_ID, -1));
                     break;
-                case ScriptManager.STATUS_LAUNCHER_PROBLEM:
+                case LegacyManager.STATUS_LAUNCHER_PROBLEM:
                     ScriptManager.logger.log("Repository Importer answered with Status LAUNCHER_PROBLEM");
-                    ScriptManager.notifyError(this, respondTo, ErrorCode.LAUNCHER_PROBLEM);
+                    legacyManager.notifyError(this, respondTo, ErrorCode.LAUNCHER_PROBLEM);
                     break;
-                case ScriptManager.STATUS_UPDATE_CONFIRMATION_REQUIRED:
+                case LegacyManager.STATUS_UPDATE_CONFIRMATION_REQUIRED:
                     ScriptManager.logger.log("Repository Importer answered with Status UPDATE_CONFIRMATION_REQUIRED");
-                    ScriptManager.updateConfirmation(respondTo, intent);
+                    legacyManager.updateConfirmation(respondTo, intent);
                     break;
                 default:
                     invalidCall();
             }
-        } else if (intent.hasExtra(ScriptManager.CODE) && intent.hasExtra(ScriptManager.NAME)) {
+        } else if (intent.hasExtra(LegacyManager.CODE) && intent.hasExtra(LegacyManager.NAME)) {
             allowFinish = requestPermission(ID_IMPORT) && loadImport();
-        } else if (intent.hasExtra((ScriptManager.SERVICE_INTENT))) {
+        } else if (intent.hasExtra((LegacyManager.SERVICE_INTENT))) {
             if (requestPermission(ID_RUN)) {
                 loadRun();
             } else {
@@ -81,7 +83,7 @@ public final class ScriptActivity extends Activity {
                     break;
             }
         } else {
-            ScriptManager.permissionNotGranted(this, respondTo);
+            legacyManager.permissionNotGranted(this, respondTo);
         }
         if (allowFinish) {
             finish();
@@ -90,13 +92,13 @@ public final class ScriptActivity extends Activity {
 
     private boolean loadImport() {
         ScriptManager.logger.log("Activity started for communication");
-        respondTo = intent.getIntExtra(ScriptManager.LISTENER_ID, -1);
+        respondTo = intent.getIntExtra(LegacyManager.LISTENER_ID, -1);
         if (respondTo != -1) {
             ScriptManager.logger.log("Initializing communication request");
-            return ScriptManager.loadScriptInternal(this, respondTo, intent.getStringExtra(ScriptManager.CODE),
-                    intent.getStringExtra(ScriptManager.NAME),
-                    intent.getIntExtra(ScriptManager.FLAGS, 0),
-                    intent.getBooleanExtra(ScriptManager.FORCE_UPDATE, false));
+            return legacyManager.loadScriptInternal(this, respondTo, intent.getStringExtra(LegacyManager.CODE),
+                    intent.getStringExtra(LegacyManager.NAME),
+                    intent.getIntExtra(LegacyManager.FLAGS, 0),
+                    intent.getBooleanExtra(LegacyManager.FORCE_UPDATE, false));
         }
         return true;
     }
@@ -104,7 +106,7 @@ public final class ScriptActivity extends Activity {
     private void loadRun() {
         ScriptManager.logger.log("Activity started for communication");
         ScriptManager.logger.log("Running script...");
-        startService((Intent) intent.getParcelableExtra(ScriptManager.SERVICE_INTENT));
+        startService((Intent) intent.getParcelableExtra(LegacyManager.SERVICE_INTENT));
     }
 
     private void invalidCall() {
