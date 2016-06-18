@@ -2,6 +2,7 @@ package com.faendir.lightning_launcher.scriptlib;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageInfo;
@@ -26,35 +27,17 @@ import com.trianguloy.llscript.repository.aidl.Script;
 class ServiceManager {
 
     private static final String INTENT = "net.pierrox.lightning_launcher.script.IMPORT";
-
-    enum Feature {
-        BIND(30),
-        FORWARD_INTENT(22);
-        private final int version;
-
-        Feature(int version) {
-            this.version = version;
-        }
-
-        int getVersion() {
-            return version;
-        }
-    }
-
-    private static ServiceManager instance;
-
-    static ServiceManager getInstance(Context context, ResponseManager responseManager) {
-        if (instance == null) {
-            instance = new ServiceManager(context, responseManager);
-        }
-        return instance;
-    }
+    private static final int MIN_SERVICE_VERSION = 30;
 
     private final ServiceInfo serviceInfo;
     private final int version;
+    private final Context context;
     private final ResponseManager responseManager;
+    private final ImporterConnection connection = new ImporterConnection();
+    private boolean isBinding = false;
 
-    private ServiceManager(Context context, ResponseManager responseManager) {
+    ServiceManager(Context context, ResponseManager responseManager) {
+        this.context = context;
         this.responseManager = responseManager;
         ScriptManager.logger.log("Resolving service...");
         Intent service = new Intent(INTENT);
@@ -77,168 +60,226 @@ class ServiceManager {
         this.serviceInfo = serviceInfo;
     }
 
-    boolean supports(Feature feature) {
-        return version >= feature.getVersion();
-    }
-
-    boolean serviceExists() {
-        return serviceInfo != null;
-    }
-
-    void loadScript(@NonNull final Context context, @NonNull final Script script, @NonNull final ScriptManager.Listener listener, final boolean forceUpdate) {
-        bindServiceAndCall(context, listener, new ServiceFunction() {
-            @Override
-            public void run(ILightningService service) {
-                try {
-                    ScriptManager.logger.log("importing into LL...");
-                    service.importScript(script, forceUpdate, new IImportCallback.Stub() {
-                        @Override
-                        public void onFinish(final int scriptId) throws RemoteException {
-                            new Handler(context.getMainLooper()).post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    listener.onLoadFinished(scriptId);
-                                }
-                            });
-                            finish();
-                        }
-
-                        @Override
-                        public void onFailure(Failure failure) throws RemoteException {
-                            switch (failure) {
-                                case SCRIPT_ALREADY_EXISTS:
-                                    new Handler(context.getMainLooper()).post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            listener.confirmUpdate(new ScriptManager.UpdateCallback(script, listener));
-                                        }
-                                    });
-                                    break;
-                                case LAUNCHER_INVALID:
-                                    responseManager.notifyError(context, listener, ErrorCode.LAUNCHER_PROBLEM);
-                                    break;
-                                case INVALID_INPUT:
-                                    responseManager.notifyError(context, listener, ErrorCode.INVALID_INPUT);
-                                    break;
-                            }
-                            finish();
-                        }
-                    });
-                } catch (SecurityException e) {
-                    ScriptManager.logger.log("SecurityException when calling service.");
-                    responseManager.notifyError(context, listener, ErrorCode.SECURITY_EXCEPTION);
-                    finish();
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                    finish();
+    private class PermissionCallback implements PermissionActivity.PermissionCallback{
+        private boolean isGranted = false;
+        @Override
+        public void handlePermissionResult(boolean isGranted) {
+            if(isGranted) {
+                this.isGranted = true;
+                synchronized (this){
+                    notify();
+                }
+                ScriptManager.logger.log("Permission granted");
+                Intent intent = new Intent(INTENT);
+                intent.setClassName(serviceInfo.packageName, serviceInfo.name);
+                ScriptManager.logger.log("Binding service...");
+                context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
+            }else {
+                isBinding = false;
+                synchronized (this){
+                    notify();
                 }
             }
-        });
+        }
     }
 
-    void runScript(@NonNull Context context, final int id, @Nullable final String data, final boolean background) {
-        bindServiceAndCall(context, null, new ServiceFunction() {
-            @Override
-            public void run(ILightningService service) {
-                try {
-                    ScriptManager.logger.log("running script...");
-                    service.runScript(id, data, background);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-                finish();
-            }
-        });
-    }
-
-    void runScriptForResult(@NonNull Context context, @NonNull final String code, final ScriptManager.Listener listener) {
-        bindServiceAndCall(context, listener, new ServiceFunction() {
-            @Override
-            void run(ILightningService service) {
-                try {
-                    service.runScriptForResult(code, new IResultCallback.Stub() {
-                        @Override
-                        public void onResult(String result) throws RemoteException {
-                            listener.onResult(result);
-                        }
-
-                        @Override
-                        public void onFailure(Failure failure) throws RemoteException {
-                            if (failure == Failure.EVAL_FAILED) {
-                                listener.onError(ErrorCode.EVAL_FAILED);
-                            }
-                        }
-                    });
-                } catch (RemoteException e) {
-                    e.printStackTrace();
+    void bind() throws RepositoryImporterException {
+        if (version >= MIN_SERVICE_VERSION) {
+            if (connection.getService() == null && !isBinding) {
+                isBinding = true;
+                final PermissionCallback callback = new PermissionCallback();
+                PermissionActivity.checkForPermission(context, "net.pierrox.lightning_launcher.IMPORT_SCRIPTS", callback);
+                //noinspection SynchronizationOnLocalVariableOrMethodParameter
+                synchronized (callback){
+                    try {
+                        callback.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    if(!callback.isGranted){
+                        throw new PermissionNotGrantedException();
+                    }
                 }
             }
-        });
+        } else if (serviceInfo != null) {
+            throw new RepositoryImporterOutdatedException();
+        } else {
+            throw new RepositoryImporterMissingException();
+        }
     }
 
-    void runAction(@NonNull Context context, @Action final int actionId, @Nullable final String data, final boolean background) {
-        bindServiceAndCall(context, null, new ServiceFunction() {
-            @Override
-            public void run(ILightningService service) {
-                try {
-                    ScriptManager.logger.log("running action in LL...");
-                    service.runAction(actionId, data, background);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-                finish();
+    void unbind(){
+        context.unbindService(connection);
+    }
+
+    private void enforceBoundOrBinding() {
+        if(connection.getService() == null && !isBinding){
+            throw new IllegalStateException("You have to bind before you can call anything else.");
+        }
+    }
+
+    private class ImporterConnection implements ServiceConnection {
+        private ILightningService service;
+
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            service = ILightningService.Stub.asInterface(iBinder);
+            isBinding = false;
+            synchronized (this) {
+                notifyAll();
             }
-        });
-    }
-
-    ServiceInfo getService(){
-        return serviceInfo;
-    }
-
-    private void bindServiceAndCall(final Context context, final ScriptManager.Listener listener, @NonNull final ServiceFunction call) {
-        PermissionActivity.checkForPermission(context, "net.pierrox.lightning_launcher.IMPORT_SCRIPTS", new PermissionActivity.PermissionCallback() {
-            @Override
-            public void handlePermissionResult(boolean isGranted) {
-                if (isGranted) {
-                    ScriptManager.logger.log("Permission granted");
-                    Intent intent = new Intent(INTENT);
-                    intent.setClassName(serviceInfo.packageName, serviceInfo.name);
-                    ScriptManager.logger.log("Binding service...");
-                    context.bindService(intent, new ServiceConnection() {
-                        @Override
-                        public void onServiceConnected(ComponentName name, IBinder service) {
-                            ScriptManager.logger.log("Service bound");
-                            call.setFinishInfo(context, this);
-                            call.run(ILightningService.Stub.asInterface(service));
-                        }
-
-                        @Override
-                        public void onServiceDisconnected(ComponentName name) {
-                            ScriptManager.logger.log("Service disconnected");
-                        }
-                    }, Context.BIND_AUTO_CREATE);
-                } else {
-                    responseManager.permissionNotGranted(context, listener);
-                }
-            }
-        });
-    }
-
-    private abstract static class ServiceFunction {
-        private ServiceConnection connection;
-        private Context context;
-
-        abstract void run(ILightningService service);
-
-        void setFinishInfo(Context context, ServiceConnection connection) {
-            this.context = context;
-            this.connection = connection;
         }
 
-        void finish() {
-            if (context != null && connection != null) {
-                context.unbindService(connection);
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            service = null;
+        }
+
+        synchronized ILightningService getService() {
+            return service;
+        }
+    }
+
+    private ILightningService getService() {
+        if (connection.getService() != null) {
+            return connection.getService();
+        }
+        enforceBoundOrBinding();
+        synchronized (connection) {
+            try {
+                connection.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
+        }
+        return connection.getService();
+    }
+
+    private class ImportCallback extends IImportCallback.Stub {
+        private Script script;
+        private int id = -1;
+
+        ImportCallback(Script script) {
+            this.script = script;
+        }
+
+        @Override
+        public void onFinish(final int scriptId) throws RemoteException {
+            id = scriptId;
+            synchronized (this) {
+                notify();
+            }
+        }
+
+        @Override
+        public void onFailure(Failure failure) throws RemoteException {
+            switch (failure) {
+                case SCRIPT_ALREADY_EXISTS:
+                    new Handler(context.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            responseManager.confirmUpdate(new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    if (i == DialogInterface.BUTTON_POSITIVE) {
+                                        id = loadScript(script, true);
+                                        synchronized (ImportCallback.this) {
+                                            ImportCallback.this.notify();
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    break;
+                case LAUNCHER_INVALID:
+                case INVALID_INPUT:
+                    synchronized (this) {
+                        notify();
+                    }
+                    break;
+            }
+        }
+
+        int getId() {
+            return id;
+        }
+    }
+
+    int loadScript(@NonNull final Script script, final boolean forceUpdate) {
+        ILightningService service = getService();
+        final ImportCallback callback = new ImportCallback(script);
+        try {
+            ScriptManager.logger.log("importing into LL...");
+            service.importScript(script, forceUpdate, callback);
+            //noinspection SynchronizationOnLocalVariableOrMethodParameter
+            synchronized (callback) {
+                callback.wait();
+            }
+            return callback.getId();
+        } catch (SecurityException e) {
+            e.printStackTrace();
+            ScriptManager.logger.log("SecurityException when calling service.");
+        } catch (RemoteException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    void runScript(final int id, @Nullable final String data, final boolean background) {
+        try {
+            getService().runScript(id, data, background);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private class ResultCallback extends IResultCallback.Stub {
+        private String result = null;
+
+        @Override
+        public void onResult(String result) throws RemoteException {
+            this.result = result;
+            synchronized (this) {
+                notify();
+            }
+        }
+
+        @Override
+        public void onFailure(Failure failure) throws RemoteException {
+            if (failure == Failure.EVAL_FAILED) {
+                ScriptManager.logger.warn("Script could not be evaluated");
+            }
+            synchronized (this) {
+                notify();
+            }
+        }
+
+        String getResult() {
+            return result;
+        }
+    }
+
+    String runScriptForResult(@NonNull final String code) {
+        final ResultCallback callback = new ResultCallback();
+        try {
+            getService().runScriptForResult(code, callback);
+            //noinspection SynchronizationOnLocalVariableOrMethodParameter
+            synchronized (callback) {
+                callback.wait();
+            }
+            return callback.getResult();
+        } catch (RemoteException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    void runAction(@Action final int actionId, @Nullable final String data, final boolean background) {
+        try {
+            getService().runAction(actionId, data, background);
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 }

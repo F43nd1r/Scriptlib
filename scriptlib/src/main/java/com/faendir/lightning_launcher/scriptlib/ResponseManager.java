@@ -14,35 +14,23 @@ import android.widget.Toast;
 /**
  * Created by Lukas on 01.06.2016.
  */
+@SuppressWarnings("WeakerAccess")
 public class ResponseManager {
 
     private static final Uri URI = Uri.parse("market://details?id=com.trianguloy.llscript.repository");
     private static final Uri ALTERNATIVE_URI = Uri.parse("https://play.google.com/store/apps/details?id=com.trianguloy.llscript.repository");
+    private final Context context;
 
     private boolean askForInstallation = true;
     private boolean toastIfPermissionNotGranted = true;
     private boolean useLightTheme = false;
     private int customTheme = 0;
 
-    ResponseManager() {
+    public ResponseManager(Context context) {
+        this.context = context;
     }
 
-    void notifyError(Context context, final ScriptManager.Listener listener, final ErrorCode errorCode) {
-        if (listener != null) {
-            ScriptManager.logger.log("Notifying caller of Error...");
-            new Handler(context.getMainLooper()).post(new Runnable() {
-                @Override
-                public void run() {
-                    listener.onError(errorCode);
-                }
-            });
-        } else {
-            ScriptManager.logger.warn("No listener, Error " + errorCode.name() + " will be ignored");
-        }
-
-    }
-
-    AlertDialog.Builder getThemedBuilder(@NonNull Context context) {
+    protected AlertDialog.Builder getThemedBuilder() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
             return new AlertDialog.Builder(context);
         }
@@ -61,43 +49,49 @@ public class ResponseManager {
         return new AlertDialog.Builder(context, theme);
     }
 
-    void permissionNotGranted(@NonNull Context context, @NonNull ScriptManager.Listener listener) {
+    protected void permissionNotGranted() {
         if (toastIfPermissionNotGranted) {
             Toast.makeText(context, R.string.text_noPermission, Toast.LENGTH_LONG).show();
         }
-        notifyError(context, listener, ErrorCode.PERMISSION_DENIED);
         ScriptManager.logger.log("Permission denied");
     }
 
-    void outdatedImporter(@NonNull final Context context, @Nullable ScriptManager.Listener listener, @Nullable final Runnable onButtonClick) {
-        askForInstallation(context, "Repository Importer outdated",
-                "This action requires a newer version of Repository Importer. Do you wish to update it?", listener, onButtonClick);
+    protected void outdatedImporter() {
+        askForInstallation("Repository Importer outdated",
+                "This action requires a newer version of Repository Importer. Do you wish to update it?");
 
     }
 
-    void noImporter(@NonNull final Context context, @Nullable ScriptManager.Listener listener, @Nullable final Runnable onButtonClick) {
-        askForInstallation(context, "Repository Importer missing",
-                "This action requires the Repository Importer to be installed. Do you wish to install it?", listener, onButtonClick);
+    protected void noImporter() {
+        askForInstallation("Repository Importer missing",
+                "This action requires the Repository Importer to be installed. Do you wish to install it?");
     }
 
-    private void askForInstallation(@NonNull final Context context, @NonNull String title, @NonNull String message, @Nullable ScriptManager.Listener listener, @Nullable final Runnable onButtonClick) {
-        notifyError(context, listener, ErrorCode.NO_IMPORTER);
+    protected void confirmUpdate(@NonNull DialogInterface.OnClickListener listener) {
+        getThemedBuilder()
+                .setTitle("Confirm update")
+                .setMessage("A script with this name does already exist. Do you want to overwrite it?")
+                .setNegativeButton("No", listener)
+                .setPositiveButton("Yes", listener)
+                .show();
+    }
+
+    protected void askForInstallation(@NonNull String title, @NonNull String message) {
         if (askForInstallation) {
             ScriptManager.logger.log("Asking user to install...");
-            getThemedBuilder(context)
+            getThemedBuilder()
                     .setTitle(title)
                     .setMessage(message)
                     .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
                         @Override
-                        public void onClick(@NonNull DialogInterface dialogInterface, int i) {
+                        public void onClick(DialogInterface dialogInterface, int i) {
                             ScriptManager.logger.log("User denied install");
                             dialogInterface.dismiss();
-                            if (onButtonClick != null) onButtonClick.run();
                         }
                     })
                     .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                         @Override
-                        public void onClick(@NonNull DialogInterface dialogInterface, int i) {
+                        public void onClick(DialogInterface dialogInterface, int i) {
                             ScriptManager.logger.log("User agreed to install");
                             dialogInterface.dismiss();
                             Intent playStore = new Intent(Intent.ACTION_VIEW, URI);
@@ -109,7 +103,6 @@ public class ResponseManager {
                                 ScriptManager.logger.log("Play Store not resolved, forwarding to browser...");
                                 context.startActivity(new Intent(Intent.ACTION_VIEW, ALTERNATIVE_URI));
                             }
-                            if (onButtonClick != null) onButtonClick.run();
                         }
                     })
                     .show();
