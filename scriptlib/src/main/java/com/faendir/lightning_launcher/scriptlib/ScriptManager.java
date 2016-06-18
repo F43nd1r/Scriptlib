@@ -3,7 +3,6 @@ package com.faendir.lightning_launcher.scriptlib;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.StyleRes;
 import android.support.annotation.WorkerThread;
 import android.util.Log;
 
@@ -24,6 +23,7 @@ public class ScriptManager {
         serviceManager = new ServiceManager(context, responseManager);
     }
 
+    @WorkerThread
     public void bind() throws RepositoryImporterException {
         try {
             serviceManager.bind();

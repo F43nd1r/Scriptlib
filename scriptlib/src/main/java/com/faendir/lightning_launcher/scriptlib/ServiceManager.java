@@ -60,13 +60,14 @@ class ServiceManager {
         this.serviceInfo = serviceInfo;
     }
 
-    private class PermissionCallback implements PermissionActivity.PermissionCallback{
+    private class PermissionCallback implements PermissionActivity.PermissionCallback {
         private boolean isGranted = false;
+
         @Override
         public void handlePermissionResult(boolean isGranted) {
-            if(isGranted) {
+            if (isGranted) {
                 this.isGranted = true;
-                synchronized (this){
+                synchronized (this) {
                     notify();
                 }
                 ScriptManager.logger.log("Permission granted");
@@ -74,9 +75,9 @@ class ServiceManager {
                 intent.setClassName(serviceInfo.packageName, serviceInfo.name);
                 ScriptManager.logger.log("Binding service...");
                 context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
-            }else {
+            } else {
                 isBinding = false;
-                synchronized (this){
+                synchronized (this) {
                     notify();
                 }
             }
@@ -90,13 +91,15 @@ class ServiceManager {
                 final PermissionCallback callback = new PermissionCallback();
                 PermissionActivity.checkForPermission(context, "net.pierrox.lightning_launcher.IMPORT_SCRIPTS", callback);
                 //noinspection SynchronizationOnLocalVariableOrMethodParameter
-                synchronized (callback){
+                synchronized (callback) {
                     try {
-                        callback.wait();
+                        if (!callback.isGranted) {
+                            callback.wait();
+                        }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    if(!callback.isGranted){
+                    if (!callback.isGranted) {
                         throw new PermissionNotGrantedException();
                     }
                 }
@@ -108,12 +111,12 @@ class ServiceManager {
         }
     }
 
-    void unbind(){
+    void unbind() {
         context.unbindService(connection);
     }
 
     private void enforceBoundOrBinding() {
-        if(connection.getService() == null && !isBinding){
+        if (connection.getService() == null && !isBinding) {
             throw new IllegalStateException("You have to bind before you can call anything else.");
         }
     }
@@ -141,11 +144,11 @@ class ServiceManager {
     }
 
     private ILightningService getService() {
-        if (connection.getService() != null) {
-            return connection.getService();
-        }
-        enforceBoundOrBinding();
         synchronized (connection) {
+            if (connection.getService() != null) {
+                return connection.getService();
+            }
+            enforceBoundOrBinding();
             try {
                 connection.wait();
             } catch (InterruptedException e) {
