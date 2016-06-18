@@ -6,6 +6,10 @@ import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
 import android.util.Log;
 
+import com.faendir.lightning_launcher.scriptlib.exception.PermissionNotGrantedException;
+import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterException;
+import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterMissingException;
+import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterOutdatedException;
 import com.trianguloy.llscript.repository.aidl.Script;
 
 /**
@@ -25,6 +29,7 @@ public class ScriptManager {
 
     @WorkerThread
     public void bind() throws RepositoryImporterException {
+        logger.log("bind");
         try {
             serviceManager.bind();
         } catch (RepositoryImporterOutdatedException e) {
@@ -33,13 +38,14 @@ public class ScriptManager {
         } catch (RepositoryImporterMissingException e) {
             responseManager.noImporter();
             throw e;
-        }catch (PermissionNotGrantedException e){
+        } catch (PermissionNotGrantedException e) {
             responseManager.permissionNotGranted();
             throw e;
         }
     }
 
-    public void unbind(){
+    public void unbind() {
+        logger.log("unbind");
         serviceManager.unbind();
     }
 
@@ -59,7 +65,8 @@ public class ScriptManager {
     /**
      * loads (or updates) a script in LL
      *
-     * @param script the script
+     * @param script      the script
+     * @param forceUpdate if they script should be updated even if there is already a script with the same name
      * @return the id of the loaded script
      */
     @WorkerThread
@@ -124,12 +131,13 @@ public class ScriptManager {
         logger.setDebug(true);
     }
 
-    public ResponseManager getResponseManager(){
+    public ResponseManager getResponseManager() {
         return responseManager;
     }
 
     public void setResponseManager(ResponseManager responseManager) {
         this.responseManager = responseManager;
+        serviceManager.setResponseManager(responseManager);
     }
 
     /**

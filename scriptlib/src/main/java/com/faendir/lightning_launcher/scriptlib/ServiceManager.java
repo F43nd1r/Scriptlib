@@ -15,6 +15,10 @@ import android.os.RemoteException;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.faendir.lightning_launcher.scriptlib.exception.PermissionNotGrantedException;
+import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterException;
+import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterMissingException;
+import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterOutdatedException;
 import com.trianguloy.llscript.repository.aidl.Failure;
 import com.trianguloy.llscript.repository.aidl.IImportCallback;
 import com.trianguloy.llscript.repository.aidl.ILightningService;
@@ -32,7 +36,7 @@ class ServiceManager {
     private final ServiceInfo serviceInfo;
     private final int version;
     private final Context context;
-    private final ResponseManager responseManager;
+    private ResponseManager responseManager;
     private final ImporterConnection connection = new ImporterConnection();
     private boolean isBinding = false;
 
@@ -89,6 +93,7 @@ class ServiceManager {
             if (connection.getService() == null && !isBinding) {
                 isBinding = true;
                 final PermissionCallback callback = new PermissionCallback();
+                ScriptManager.logger.log("Checking for permission...");
                 PermissionActivity.checkForPermission(context, "net.pierrox.lightning_launcher.IMPORT_SCRIPTS", callback);
                 //noinspection SynchronizationOnLocalVariableOrMethodParameter
                 synchronized (callback) {
@@ -128,6 +133,7 @@ class ServiceManager {
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             service = ILightningService.Stub.asInterface(iBinder);
             isBinding = false;
+            ScriptManager.logger.log("Service connected");
             synchronized (this) {
                 notifyAll();
             }
@@ -135,6 +141,7 @@ class ServiceManager {
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
+            ScriptManager.logger.log("Service disconnected");
             service = null;
         }
 
@@ -146,9 +153,11 @@ class ServiceManager {
     private ILightningService getService() {
         synchronized (connection) {
             if (connection.getService() != null) {
+                ScriptManager.logger.log("Service already bound, return directly");
                 return connection.getService();
             }
             enforceBoundOrBinding();
+            ScriptManager.logger.log("Service binding, wait");
             try {
                 connection.wait();
             } catch (InterruptedException e) {
@@ -159,7 +168,7 @@ class ServiceManager {
     }
 
     private class ImportCallback extends IImportCallback.Stub {
-        private Script script;
+        private final Script script;
         private int id = -1;
 
         ImportCallback(Script script) {
@@ -213,12 +222,13 @@ class ServiceManager {
         ILightningService service = getService();
         final ImportCallback callback = new ImportCallback(script);
         try {
-            ScriptManager.logger.log("importing into LL...");
+            ScriptManager.logger.log("Importing into LL...");
             service.importScript(script, forceUpdate, callback);
             //noinspection SynchronizationOnLocalVariableOrMethodParameter
             synchronized (callback) {
                 callback.wait();
             }
+            ScriptManager.logger.log("Import finished");
             return callback.getId();
         } catch (SecurityException e) {
             e.printStackTrace();
@@ -271,6 +281,7 @@ class ServiceManager {
             synchronized (callback) {
                 callback.wait();
             }
+            ScriptManager.logger.log("Result received");
             return callback.getResult();
         } catch (RemoteException | InterruptedException e) {
             e.printStackTrace();
@@ -284,5 +295,9 @@ class ServiceManager {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+    }
+
+    void setResponseManager(ResponseManager responseManager) {
+        this.responseManager = responseManager;
     }
 }

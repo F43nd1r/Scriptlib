@@ -6,9 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Handler;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.widget.Toast;
 
 /**
@@ -68,6 +66,7 @@ public class ResponseManager {
     }
 
     protected void confirmUpdate(@NonNull DialogInterface.OnClickListener listener) {
+        ScriptManager.logger.log("Asking user to confirm script update...");
         getThemedBuilder()
                 .setTitle("Confirm update")
                 .setMessage("A script with this name does already exist. Do you want to overwrite it?")
