@@ -64,7 +64,7 @@ dependencies {
 }
 
 
-apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
+apply from: 'installv1.gradle'
 apply from: 'bintrayv1.gradle'
 
 /* how to upload: [terminal]

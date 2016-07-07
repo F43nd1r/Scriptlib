@@ -1,3 +1,5 @@
+//source https://raw.githubusercontent.com/nuuneoi/JCenter/master/bintrayv1.gradle
+
 apply plugin: 'com.jfrog.bintray'
 
 version = libraryVersion
