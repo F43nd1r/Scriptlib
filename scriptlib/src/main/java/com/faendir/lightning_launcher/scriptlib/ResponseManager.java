@@ -2,11 +2,14 @@ package com.faendir.lightning_launcher.scriptlib;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.ResultReceiver;
 import android.support.annotation.NonNull;
+import android.support.annotation.StringRes;
 import android.widget.Toast;
 
 /**
@@ -28,10 +31,7 @@ public class ResponseManager {
         this.context = context;
     }
 
-    protected AlertDialog.Builder getThemedBuilder() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-            return new AlertDialog.Builder(context);
-        }
+    protected DialogActivity.Builder getThemedBuilder() {
         int theme;
         if (customTheme != 0) {
             theme = customTheme;
@@ -40,11 +40,13 @@ public class ResponseManager {
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
             //noinspection deprecation
             theme = useLightTheme ? AlertDialog.THEME_DEVICE_DEFAULT_LIGHT : AlertDialog.THEME_DEVICE_DEFAULT_DARK;
-        } else {
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             //noinspection deprecation
             theme = useLightTheme ? AlertDialog.THEME_HOLO_LIGHT : AlertDialog.THEME_HOLO_DARK;
+        } else {
+            theme = android.R.style.Theme_Dialog;
         }
-        return new AlertDialog.Builder(context, theme);
+        return new DialogActivity.Builder(context, theme);
     }
 
     protected void permissionNotGranted() {
@@ -55,52 +57,46 @@ public class ResponseManager {
     }
 
     protected void outdatedImporter() {
-        askForInstallation("Repository Importer outdated",
-                "This action requires a newer version of Repository Importer. Do you wish to update it?");
+        askForInstallation(R.string.title_outDated, R.string.message_outDated);
 
     }
 
     protected void noImporter() {
-        askForInstallation("Repository Importer missing",
-                "This action requires the Repository Importer to be installed. Do you wish to install it?");
+        askForInstallation(R.string.title_missing, R.string.message_missing);
     }
 
-    protected void confirmUpdate(@NonNull DialogInterface.OnClickListener listener) {
+    protected void confirmUpdate(@NonNull ResultReceiver listener) {
         ScriptManager.logger.log("Asking user to confirm script update...");
         getThemedBuilder()
-                .setTitle("Confirm update")
-                .setMessage("A script with this name does already exist. Do you want to overwrite it?")
-                .setNegativeButton("No", listener)
-                .setPositiveButton("Yes", listener)
+                .setTitle(R.string.title_confirmUpdate)
+                .setMessage(R.string.message_confirmUpdate)
+                .setButtons(android.R.string.yes, android.R.string.no, listener)
                 .show();
     }
 
-    protected void askForInstallation(@NonNull String title, @NonNull String message) {
+    protected void askForInstallation(@StringRes int title, @StringRes int message) {
         if (askForInstallation) {
             ScriptManager.logger.log("Asking user to install...");
             getThemedBuilder()
                     .setTitle(title)
                     .setMessage(message)
-                    .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                    .setButtons(android.R.string.yes, android.R.string.no, new ResultReceiver(new Handler(context.getMainLooper())) {
                         @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            ScriptManager.logger.log("User denied install");
-                            dialogInterface.dismiss();
-                        }
-                    })
-                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            ScriptManager.logger.log("User agreed to install");
-                            dialogInterface.dismiss();
-                            Intent playStore = new Intent(Intent.ACTION_VIEW, URI);
-                            ScriptManager.logger.log("Resolving Play Store...");
-                            if (context.getPackageManager().resolveActivity(playStore, 0) != null) {
-                                ScriptManager.logger.log("Forwarding to Play Store...");
-                                context.startActivity(playStore);
+                        protected void onReceiveResult(int resultCode, Bundle resultData) {
+                            super.onReceiveResult(resultCode, resultData);
+                            if (resultCode == AlertDialog.BUTTON_POSITIVE) {
+                                ScriptManager.logger.log("User agreed to install");
+                                Intent playStore = new Intent(Intent.ACTION_VIEW, URI);
+                                ScriptManager.logger.log("Resolving Play Store...");
+                                if (context.getPackageManager().resolveActivity(playStore, 0) != null) {
+                                    ScriptManager.logger.log("Forwarding to Play Store...");
+                                    context.startActivity(playStore);
+                                } else {
+                                    ScriptManager.logger.log("Play Store not resolved, forwarding to browser...");
+                                    context.startActivity(new Intent(Intent.ACTION_VIEW, ALTERNATIVE_URI));
+                                }
                             } else {
-                                ScriptManager.logger.log("Play Store not resolved, forwarding to browser...");
-                                context.startActivity(new Intent(Intent.ACTION_VIEW, ALTERNATIVE_URI));
+                                ScriptManager.logger.log("User denied install");
                             }
                         }
                     })
@@ -123,4 +119,5 @@ public class ResponseManager {
     public void setCustomTheme(int customTheme) {
         this.customTheme = customTheme;
     }
+
 }

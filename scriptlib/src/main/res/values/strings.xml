@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">ScriptLib</string>
     <string name="text_noPermission">This does not work without Permission IMPORT_SCRIPTS.</string>
+    <string name="title_outDated">Repository Importer outdated</string>
+    <string name="title_missing">Repository Importer missing</string>
+    <string name="message_outDated">This action requires a newer version of Repository Importer. Do you wish to update it?</string>
+    <string name="message_missing">This action requires the Repository Importer to be installed. Do you wish to install it?</string>
+    <string name="title_confirmUpdate">Confirm update</string>
+    <string name="message_confirmUpdate">A script with this name does already exist. Do you want to overwrite it?</string>
 </resources>

@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.faendir.lightning_launcher.scriptlib">
+    package="com.faendir.lightning_launcher.scriptlib">
 
-    <uses-permission android:name="net.pierrox.lightning_launcher.IMPORT_SCRIPTS"/>
+    <uses-permission android:name="net.pierrox.lightning_launcher.IMPORT_SCRIPTS" />
 
 
     <application
@@ -9,8 +9,10 @@
         android:label="@string/app_name">
         <activity
             android:name="PermissionActivity"
-            android:theme="@style/Transparent" >
-        </activity>
+            android:theme="@style/Transparent" />
+        <activity
+            android:name=".DialogActivity"
+            android:theme="@style/Transparent" />
     </application>
 
 </manifest>
