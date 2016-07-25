@@ -20,10 +20,13 @@ public class AsyncExecutorService {
     private final ServiceManager serviceManager;
     private final LinkedHashMap<Executor, ResultCallback> map;
     private ExceptionHandler exceptionHandler;
+    private boolean keepAlive;
 
     public AsyncExecutorService(@NonNull ServiceManager serviceManager) {
         this.serviceManager = serviceManager;
         map = new LinkedHashMap<>();
+        exceptionHandler = null;
+        keepAlive = false;
     }
 
     public void start() {
@@ -41,7 +44,9 @@ public class AsyncExecutorService {
                         }
                         iterator.remove();
                     }
-                    serviceManager.unbind();
+                    if(!keepAlive) {
+                        serviceManager.unbind();
+                    }
                 } catch (RepositoryImporterException e) {
                     if (exceptionHandler != null) {
                         exceptionHandler.onException(e);
@@ -58,6 +63,11 @@ public class AsyncExecutorService {
 
     public <T> AsyncExecutorService add(@NonNull Executor<T> executor, @Nullable ResultCallback<T> callback) {
         map.put(executor, callback);
+        return this;
+    }
+
+    public AsyncExecutorService setKeepAliveAfterwards(boolean keepAlive){
+        this.keepAlive = keepAlive;
         return this;
     }
 

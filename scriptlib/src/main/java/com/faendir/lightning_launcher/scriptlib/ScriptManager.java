@@ -157,6 +157,7 @@ public class ScriptManager {
         new ActionExecutor(actionId).setData(data).setBackground(background).execute(serviceManager);
     }
 
+    @WorkerThread
     public <T> T execute(Executor<T> executor) {
         return executor.execute(serviceManager);
     }

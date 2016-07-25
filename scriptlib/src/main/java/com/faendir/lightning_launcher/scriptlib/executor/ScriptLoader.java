@@ -15,10 +15,16 @@ import com.trianguloy.llscript.repository.aidl.Script;
 public class ScriptLoader implements Executor<Integer> {
     private final Script script;
     private boolean forceUpdate;
+    private boolean runScript;
+    private boolean background;
+    private String data;
 
     public ScriptLoader(@NonNull Script script) {
         this.script = script;
         forceUpdate = true;
+        runScript = false;
+        background = false;
+        data = null;
     }
 
     public ScriptLoader setForceUpdate(boolean forceUpdate) {
@@ -26,9 +32,28 @@ public class ScriptLoader implements Executor<Integer> {
         return this;
     }
 
+    public ScriptLoader setRunScript(boolean runScript) {
+        this.runScript = runScript;
+        return this;
+    }
+
+    public ScriptLoader setRunInBackground(boolean background) {
+        this.background = background;
+        return this;
+    }
+
+    public ScriptLoader setRunData(String data) {
+        this.data = data;
+        return this;
+    }
+
     @WorkerThread
     @Override
     public Integer execute(@NonNull ServiceManager serviceManager) {
-        return serviceManager.loadScript(script, forceUpdate);
+        int result = serviceManager.loadScript(script, forceUpdate);
+        if (runScript) {
+            serviceManager.runScript(result, data, background);
+        }
+        return result;
     }
 }
