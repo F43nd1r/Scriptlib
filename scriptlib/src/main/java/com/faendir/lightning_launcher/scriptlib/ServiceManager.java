@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.ResultReceiver;
+import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -30,9 +31,11 @@ import com.trianguloy.llscript.repository.aidl.Script;
 import static com.faendir.lightning_launcher.scriptlib.ScriptManager.logger;
 
 /**
- * Created by Lukas on 01.06.2016.
+ * Created on 01.06.2016.
+ *
+ * @author F43nd1r
  */
-class ServiceManager {
+public class ServiceManager {
 
     private static final String INTENT = "net.pierrox.lightning_launcher.script.IMPORT";
     private static final int MIN_SERVICE_VERSION = 30;
@@ -123,7 +126,7 @@ class ServiceManager {
     void unbind() {
         try {
             context.unbindService(connection);
-        }catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             logger.warn("Trying to unbind while not bound.");
         }
     }
@@ -134,7 +137,7 @@ class ServiceManager {
         }
     }
 
-    private class ImporterConnection implements ServiceConnection {
+    private final class ImporterConnection implements ServiceConnection {
         private ILightningService service;
 
         @Override
@@ -175,7 +178,7 @@ class ServiceManager {
         return connection.getService();
     }
 
-    private class ImportCallback extends IImportCallback.Stub {
+    private final class ImportCallback extends IImportCallback.Stub {
         private final Script script;
         private int id = -1;
 
@@ -225,7 +228,8 @@ class ServiceManager {
         }
     }
 
-    int loadScript(@NonNull final Script script, final boolean forceUpdate) {
+    @CheckResult
+    public int loadScript(@NonNull final Script script, final boolean forceUpdate) {
         ILightningService service = getService();
         final ImportCallback callback = new ImportCallback(script);
         try {
@@ -246,8 +250,9 @@ class ServiceManager {
         return -1;
     }
 
-    void runScript(final int id, @Nullable final String data, final boolean background) {
-        if (id < 0) logger.warn("Running script with negative id. Are you sure this is what you want to do?");
+    public void runScript(final int id, @Nullable final String data, final boolean background) {
+        if (id < 0)
+            logger.warn("Running script with negative id. Are you sure this is what you want to do?");
         try {
             getService().runScript(id, data, background);
         } catch (RemoteException e) {
@@ -255,7 +260,7 @@ class ServiceManager {
         }
     }
 
-    private class ResultCallback extends IResultCallback.Stub {
+    private final class ResultCallback extends IResultCallback.Stub {
         private String result = null;
 
         @Override
@@ -281,7 +286,7 @@ class ServiceManager {
         }
     }
 
-    String runScriptForResult(@NonNull final String code) {
+    public String runScriptForResult(@NonNull final String code) {
         final ResultCallback callback = new ResultCallback();
         try {
             getService().runScriptForResult(code, callback);
@@ -297,7 +302,7 @@ class ServiceManager {
         return null;
     }
 
-    void runAction(@Action final int actionId, @Nullable final String data, final boolean background) {
+    public void runAction(@Action final int actionId, @Nullable final String data, final boolean background) {
         try {
             getService().runAction(actionId, data, background);
         } catch (RemoteException e) {
@@ -307,5 +312,9 @@ class ServiceManager {
 
     void setResponseManager(ResponseManager responseManager) {
         this.responseManager = responseManager;
+    }
+
+    public Context getContext() {
+        return context;
     }
 }

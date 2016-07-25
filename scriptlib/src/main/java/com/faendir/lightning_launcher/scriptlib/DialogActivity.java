@@ -12,7 +12,9 @@ import android.widget.Button;
 import android.widget.TextView;
 
 /**
- * Created by Lukas on 06.07.2016.
+ * Created on 06.07.2016.
+ *
+ * @author F43nd1r
  */
 
 public class DialogActivity extends Activity {

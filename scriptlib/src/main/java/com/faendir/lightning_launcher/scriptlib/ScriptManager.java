@@ -3,6 +3,7 @@ package com.faendir.lightning_launcher.scriptlib;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.RawRes;
 import android.support.annotation.WorkerThread;
 import android.util.Log;
 
@@ -10,10 +11,19 @@ import com.faendir.lightning_launcher.scriptlib.exception.PermissionNotGrantedEx
 import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterException;
 import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterMissingException;
 import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterOutdatedException;
+import com.faendir.lightning_launcher.scriptlib.executor.ActionExecutor;
+import com.faendir.lightning_launcher.scriptlib.executor.DirectScriptExecutor;
+import com.faendir.lightning_launcher.scriptlib.executor.Executor;
+import com.faendir.lightning_launcher.scriptlib.executor.ScriptExecutor;
+import com.faendir.lightning_launcher.scriptlib.executor.ScriptLoader;
 import com.trianguloy.llscript.repository.aidl.Script;
 
+import java.util.Map;
+
 /**
- * Created by Lukas on 18.06.2016.
+ * Created on 18.06.2016.
+ *
+ * @author F43nd1r
  */
 
 public class ScriptManager {
@@ -72,7 +82,7 @@ public class ScriptManager {
     @WorkerThread
     public int loadScript(@NonNull Script script, boolean forceUpdate) {
         logger.log("LoadScript");
-        return serviceManager.loadScript(script, forceUpdate);
+        return new ScriptLoader(script).setForceUpdate(forceUpdate).execute(serviceManager);
     }
 
     /**
@@ -96,7 +106,7 @@ public class ScriptManager {
     @WorkerThread
     public void runScript(int id, @Nullable String data, boolean background) {
         logger.log("runScript");
-        serviceManager.runScript(id, data, background);
+        new ScriptExecutor(id).setData(data).setBackground(background).execute(serviceManager);
     }
 
     /**
@@ -108,7 +118,30 @@ public class ScriptManager {
     @WorkerThread
     public String runScriptForResult(@NonNull String code) {
         logger.log("runScriptForResult");
-        return serviceManager.runScriptForResult(code);
+        return new DirectScriptExecutor(code).execute(serviceManager);
+    }
+
+    /**
+     * run a script without importing it and receive a result string.
+     * Note that this is only a shortcut method for {@link #runScriptForResult(int, Map)} with one "data" entry
+     *
+     * @param code script code resource id. last line has to be "return [some_string]"
+     * @param data this will be available in the script as variable "data" (not LL.getEvent().getData()!)
+     * @return the result string
+     */
+    public String runScriptForResult(@RawRes int code, @Nullable String data) {
+        return new DirectScriptExecutor(code).putVariable("data", data).execute(serviceManager);
+    }
+
+    /**
+     * run a script without importing it and receive a result string
+     *
+     * @param code      script code resource id. last line has to be "return [some_string]"
+     * @param variables a map of variable names and their values, which will be available in the script
+     * @return the result string
+     */
+    String runScriptForResult(@RawRes int code, @NonNull Map<String, String> variables) {
+        return new DirectScriptExecutor(code).putVariables(variables).execute(serviceManager);
     }
 
     /**
@@ -121,7 +154,15 @@ public class ScriptManager {
     @WorkerThread
     public void runAction(@Action int actionId, @Nullable String data, boolean background) {
         logger.log("runAction");
-        serviceManager.runAction(actionId, data, background);
+        new ActionExecutor(actionId).setData(data).setBackground(background).execute(serviceManager);
+    }
+
+    public <T> T execute(Executor<T> executor) {
+        return executor.execute(serviceManager);
+    }
+
+    public AsyncExecutorService getAsyncExecutorService() {
+        return new AsyncExecutorService(serviceManager);
     }
 
     /**

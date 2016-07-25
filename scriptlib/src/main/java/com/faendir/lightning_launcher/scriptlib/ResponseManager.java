@@ -13,7 +13,9 @@ import android.support.annotation.StringRes;
 import android.widget.Toast;
 
 /**
- * Created by Lukas on 01.06.2016.
+ * Created on 01.06.2016.
+ *
+ * @author F43nd1r
  */
 @SuppressWarnings("WeakerAccess")
 public class ResponseManager {

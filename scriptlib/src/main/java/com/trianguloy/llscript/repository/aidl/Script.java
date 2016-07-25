@@ -111,7 +111,7 @@ public class Script implements Parcelable {
     };
 
     @Nullable
-    private static String rawResourceToString(@NonNull Context context, @RawRes int rawRes) {
+    public static String rawResourceToString(@NonNull Context context, @RawRes int rawRes) {
         try {
             InputStream inputStream = context.getResources().openRawResource(rawRes);
             byte[] bytes = new byte[1024];
