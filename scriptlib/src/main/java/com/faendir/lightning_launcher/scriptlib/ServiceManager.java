@@ -95,7 +95,7 @@ public class ServiceManager {
         }
     }
 
-    void bind() throws RepositoryImporterException {
+    synchronized void bind() throws RepositoryImporterException {
         if (version >= MIN_SERVICE_VERSION) {
             if (connection.getService() == null && !isBinding) {
                 isBinding = true;
@@ -229,7 +229,7 @@ public class ServiceManager {
     }
 
     @CheckResult
-    public int loadScript(@NonNull final Script script, final boolean forceUpdate) {
+    public synchronized int loadScript(@NonNull final Script script, final boolean forceUpdate) {
         ILightningService service = getService();
         final ImportCallback callback = new ImportCallback(script);
         try {
@@ -250,7 +250,7 @@ public class ServiceManager {
         return -1;
     }
 
-    public void runScript(final int id, @Nullable final String data, final boolean background) {
+    public synchronized void runScript(final int id, @Nullable final String data, final boolean background) {
         if (id < 0)
             logger.warn("Running script with negative id. Are you sure this is what you want to do?");
         try {
@@ -286,7 +286,7 @@ public class ServiceManager {
         }
     }
 
-    public String runScriptForResult(@NonNull final String code) {
+    public synchronized String runScriptForResult(@NonNull final String code) {
         final ResultCallback callback = new ResultCallback();
         try {
             getService().runScriptForResult(code, callback);
@@ -302,7 +302,7 @@ public class ServiceManager {
         return null;
     }
 
-    public void runAction(@Action final int actionId, @Nullable final String data, final boolean background) {
+    public synchronized void runAction(@Action final int actionId, @Nullable final String data, final boolean background) {
         try {
             getService().runAction(actionId, data, background);
         } catch (RemoteException e) {

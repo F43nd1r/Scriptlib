@@ -5,7 +5,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RawRes;
 import android.support.annotation.WorkerThread;
-import android.util.Log;
 
 import com.faendir.lightning_launcher.scriptlib.exception.PermissionNotGrantedException;
 import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterException;
@@ -28,7 +27,7 @@ import java.util.Map;
 
 public class ScriptManager {
 
-    static Logger logger = new Logger();
+    static Logger logger = new DefaultLogger();
     private ResponseManager responseManager;
     private final ServiceManager serviceManager;
 
@@ -193,29 +192,4 @@ public class ScriptManager {
         ScriptManager.logger.log("Logger replaced");
     }
 
-    /**
-     * A logger which outputs to androids default console if in debug mode
-     */
-    public static class Logger {
-        private boolean debug = false;
-        private static final String TAG = "[SCRIPTLIB]";
-
-        final void log(String msg) {
-            if (debug) {
-                Log.d(TAG, msg);
-            }
-        }
-
-        final void warn(String msg) {
-            Log.w(TAG, msg);
-        }
-
-        public final void setDebug(boolean debug) {
-            this.debug = debug;
-        }
-
-        public final boolean getDebug() {
-            return debug;
-        }
-    }
 }
