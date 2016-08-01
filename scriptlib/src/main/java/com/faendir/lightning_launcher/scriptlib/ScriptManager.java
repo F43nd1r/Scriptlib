@@ -1,6 +1,7 @@
 package com.faendir.lightning_launcher.scriptlib;
 
 import android.content.Context;
+import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RawRes;
@@ -21,6 +22,7 @@ import java.util.Map;
  * @author F43nd1r
  */
 
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class ScriptManager {
 
     static Logger logger = new DefaultLogger();
@@ -32,6 +34,7 @@ public class ScriptManager {
         serviceManager = new ServiceManager(context, responseManager);
     }
 
+    @CheckResult
     @WorkerThread
     public BindResult bind() {
         logger.log("bind");
@@ -126,7 +129,7 @@ public class ScriptManager {
      * @param variables a map of variable names and their values, which will be available in the script
      * @return the result string
      */
-    String runScriptForResult(@RawRes int code, @NonNull Map<String, String> variables) {
+    public String runScriptForResult(@RawRes int code, @NonNull Map<String, String> variables) {
         return new DirectScriptExecutor(code).putVariables(variables).execute(serviceManager);
     }
 
