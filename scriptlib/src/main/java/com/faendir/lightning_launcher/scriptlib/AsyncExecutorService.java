@@ -3,7 +3,6 @@ package com.faendir.lightning_launcher.scriptlib;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterException;
 import com.faendir.lightning_launcher.scriptlib.executor.Executor;
 
 import java.util.Iterator;
@@ -19,13 +18,13 @@ import java.util.Map;
 public class AsyncExecutorService {
     private final ServiceManager serviceManager;
     private final LinkedHashMap<Executor, ResultCallback> map;
-    private ExceptionHandler exceptionHandler;
+    private ResultCallback<BindResult> bindResultHandler;
     private boolean keepAlive;
 
-    public AsyncExecutorService(@NonNull ServiceManager serviceManager) {
+    public AsyncExecutorService(@NonNull ServiceManager serviceManager, ResponseManager responseManager) {
         this.serviceManager = serviceManager;
         map = new LinkedHashMap<>();
-        exceptionHandler = null;
+        bindResultHandler = new DefaultBindResultHandler(responseManager);
         keepAlive = false;
     }
 
@@ -33,8 +32,9 @@ public class AsyncExecutorService {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    serviceManager.bind();
+                BindResult r = serviceManager.bind();
+                if(bindResultHandler != null) bindResultHandler.onResult(r);
+                if(r == BindResult.OK) {
                     for (Iterator<Map.Entry<Executor, ResultCallback>> iterator = map.entrySet().iterator(); iterator.hasNext(); ) {
                         Map.Entry<Executor, ResultCallback> entry = iterator.next();
                         Object result = entry.getKey().execute(serviceManager);
@@ -46,10 +46,6 @@ public class AsyncExecutorService {
                     }
                     if(!keepAlive) {
                         serviceManager.unbind();
-                    }
-                } catch (RepositoryImporterException e) {
-                    if (exceptionHandler != null) {
-                        exceptionHandler.onException(e);
                     }
                 }
 
@@ -71,13 +67,9 @@ public class AsyncExecutorService {
         return this;
     }
 
-    public AsyncExecutorService setExceptionHandler(ExceptionHandler exceptionHandler) {
-        this.exceptionHandler = exceptionHandler;
+    public AsyncExecutorService setBindResultHandler(ResultCallback<BindResult> bindResultHandler) {
+        this.bindResultHandler = bindResultHandler;
         return this;
-    }
-
-    public interface ExceptionHandler {
-        void onException(RepositoryImporterException e);
     }
 
 }

@@ -6,10 +6,6 @@ import android.support.annotation.Nullable;
 import android.support.annotation.RawRes;
 import android.support.annotation.WorkerThread;
 
-import com.faendir.lightning_launcher.scriptlib.exception.PermissionNotGrantedException;
-import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterException;
-import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterMissingException;
-import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterOutdatedException;
 import com.faendir.lightning_launcher.scriptlib.executor.ActionExecutor;
 import com.faendir.lightning_launcher.scriptlib.executor.DirectScriptExecutor;
 import com.faendir.lightning_launcher.scriptlib.executor.Executor;
@@ -37,20 +33,11 @@ public class ScriptManager {
     }
 
     @WorkerThread
-    public void bind() throws RepositoryImporterException {
+    public BindResult bind() {
         logger.log("bind");
-        try {
-            serviceManager.bind();
-        } catch (RepositoryImporterOutdatedException e) {
-            responseManager.outdatedImporter();
-            throw e;
-        } catch (RepositoryImporterMissingException e) {
-            responseManager.noImporter();
-            throw e;
-        } catch (PermissionNotGrantedException e) {
-            responseManager.permissionNotGranted();
-            throw e;
-        }
+        BindResult result = serviceManager.bind();
+        new DefaultBindResultHandler(responseManager).onResult(result);
+        return result;
     }
 
     public void unbind() {
@@ -162,7 +149,7 @@ public class ScriptManager {
     }
 
     public AsyncExecutorService getAsyncExecutorService() {
-        return new AsyncExecutorService(serviceManager);
+        return new AsyncExecutorService(serviceManager, responseManager);
     }
 
     /**

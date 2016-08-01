@@ -18,10 +18,6 @@ import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.faendir.lightning_launcher.scriptlib.exception.PermissionNotGrantedException;
-import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterException;
-import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterMissingException;
-import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterOutdatedException;
 import com.trianguloy.llscript.repository.aidl.Failure;
 import com.trianguloy.llscript.repository.aidl.IImportCallback;
 import com.trianguloy.llscript.repository.aidl.ILightningService;
@@ -73,14 +69,12 @@ public class ServiceManager {
 
     private class PermissionCallback implements PermissionActivity.PermissionCallback {
         private boolean isGranted = false;
+        private boolean waitingForGrant = true;
 
         @Override
         public void handlePermissionResult(boolean isGranted) {
             if (isGranted) {
                 this.isGranted = true;
-                synchronized (this) {
-                    notify();
-                }
                 logger.log("Permission granted");
                 Intent intent = new Intent(INTENT);
                 intent.setClassName(serviceInfo.packageName, serviceInfo.name);
@@ -88,14 +82,15 @@ public class ServiceManager {
                 context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
             } else {
                 isBinding = false;
-                synchronized (this) {
-                    notify();
-                }
+            }
+            synchronized (this) {
+                waitingForGrant = false;
+                notifyAll();
             }
         }
     }
 
-    synchronized void bind() throws RepositoryImporterException {
+    BindResult bind()  {
         if (version >= MIN_SERVICE_VERSION) {
             if (connection.getService() == null && !isBinding) {
                 isBinding = true;
@@ -104,22 +99,20 @@ public class ServiceManager {
                 PermissionActivity.checkForPermission(context, "net.pierrox.lightning_launcher.IMPORT_SCRIPTS", callback);
                 //noinspection SynchronizationOnLocalVariableOrMethodParameter
                 synchronized (callback) {
-                    try {
-                        if (!callback.isGranted) {
+                    while (callback.waitingForGrant) {
+                        try {
                             callback.wait();
+                        } catch (InterruptedException ignored) {
                         }
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
                     }
                     if (!callback.isGranted) {
-                        throw new PermissionNotGrantedException();
+                        return BindResult.PERMISSION_NOT_GRANTED;
                     }
                 }
             }
-        } else if (serviceInfo != null) {
-            throw new RepositoryImporterOutdatedException();
+            return BindResult.OK;
         } else {
-            throw new RepositoryImporterMissingException();
+            return serviceInfo != null ? BindResult.REPOSITORY_IMPORTER_OUTDATED : BindResult.REPOSITORY_IMPORTER_MISSING;
         }
     }
 
@@ -156,7 +149,7 @@ public class ServiceManager {
             service = null;
         }
 
-        synchronized ILightningService getService() {
+        ILightningService getService() {
             return service;
         }
     }
@@ -169,10 +162,11 @@ public class ServiceManager {
             }
             enforceBoundOrBinding();
             logger.log("Service binding, wait");
-            try {
-                connection.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            while (connection.getService() == null) {
+                try {
+                    connection.wait();
+                } catch (InterruptedException ignored) {
+                }
             }
         }
         return connection.getService();
@@ -181,6 +175,7 @@ public class ServiceManager {
     private final class ImportCallback extends IImportCallback.Stub {
         private final Script script;
         private int id = -1;
+        private boolean running = true;
 
         ImportCallback(Script script) {
             this.script = script;
@@ -190,7 +185,8 @@ public class ServiceManager {
         public void onFinish(final int scriptId) throws RemoteException {
             id = scriptId;
             synchronized (this) {
-                notify();
+                running = false;
+                notifyAll();
             }
         }
 
@@ -208,16 +204,16 @@ public class ServiceManager {
                                 logger.log("User denied update");
                             }
                             synchronized (ImportCallback.this) {
-                                ImportCallback.this.notify();
+                                running = false;
+                                ImportCallback.this.notifyAll();
                             }
                         }
                     });
                     break;
-                case LAUNCHER_INVALID:
-                case INVALID_INPUT:
-                case EVAL_FAILED:
+                default:
                     synchronized (this) {
-                        notify();
+                        running = false;
+                        notifyAll();
                     }
                     break;
             }
@@ -229,7 +225,7 @@ public class ServiceManager {
     }
 
     @CheckResult
-    public synchronized int loadScript(@NonNull final Script script, final boolean forceUpdate) {
+    public int loadScript(@NonNull final Script script, final boolean forceUpdate) {
         ILightningService service = getService();
         final ImportCallback callback = new ImportCallback(script);
         try {
@@ -237,20 +233,25 @@ public class ServiceManager {
             service.importScript(script, forceUpdate, callback);
             //noinspection SynchronizationOnLocalVariableOrMethodParameter
             synchronized (callback) {
-                callback.wait();
+                while (callback.running) {
+                    try {
+                        callback.wait();
+                    } catch (InterruptedException ignored) {
+                    }
+                }
             }
             logger.log("Import finished");
             return callback.getId();
         } catch (SecurityException e) {
             e.printStackTrace();
             logger.log("SecurityException when calling service.");
-        } catch (RemoteException | InterruptedException e) {
+        } catch (RemoteException e) {
             e.printStackTrace();
         }
         return -1;
     }
 
-    public synchronized void runScript(final int id, @Nullable final String data, final boolean background) {
+    public void runScript(final int id, @Nullable final String data, final boolean background) {
         if (id < 0)
             logger.warn("Running script with negative id. Are you sure this is what you want to do?");
         try {
@@ -262,12 +263,14 @@ public class ServiceManager {
 
     private final class ResultCallback extends IResultCallback.Stub {
         private String result = null;
+        private boolean running = true;
 
         @Override
         public void onResult(String result) throws RemoteException {
             this.result = result;
             synchronized (this) {
-                notify();
+                running = false;
+                notifyAll();
             }
         }
 
@@ -277,7 +280,8 @@ public class ServiceManager {
                 logger.warn("Script could not be evaluated");
             }
             synchronized (this) {
-                notify();
+                running = false;
+                notifyAll();
             }
         }
 
@@ -286,23 +290,28 @@ public class ServiceManager {
         }
     }
 
-    public synchronized String runScriptForResult(@NonNull final String code) {
+    public String runScriptForResult(@NonNull final String code) {
         final ResultCallback callback = new ResultCallback();
         try {
             getService().runScriptForResult(code, callback);
             //noinspection SynchronizationOnLocalVariableOrMethodParameter
             synchronized (callback) {
-                callback.wait();
+                while (callback.running) {
+                    try {
+                        callback.wait();
+                    } catch (InterruptedException ignored) {
+                    }
+                }
             }
             logger.log("Result received");
             return callback.getResult();
-        } catch (RemoteException | InterruptedException e) {
+        } catch (RemoteException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public synchronized void runAction(@Action final int actionId, @Nullable final String data, final boolean background) {
+    public void runAction(@Action final int actionId, @Nullable final String data, final boolean background) {
         try {
             getService().runAction(actionId, data, background);
         } catch (RemoteException e) {

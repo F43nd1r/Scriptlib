@@ -52,10 +52,15 @@ public class ResponseManager {
     }
 
     protected void permissionNotGranted() {
-        if (toastIfPermissionNotGranted) {
-            Toast.makeText(context, R.string.text_noPermission, Toast.LENGTH_LONG).show();
-        }
-        ScriptManager.logger.log("Permission denied");
+        new Handler(context.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                if (toastIfPermissionNotGranted) {
+                    Toast.makeText(context, R.string.text_noPermission, Toast.LENGTH_LONG).show();
+                }
+                ScriptManager.logger.log("Permission denied");
+            }
+        });
     }
 
     protected void outdatedImporter() {
