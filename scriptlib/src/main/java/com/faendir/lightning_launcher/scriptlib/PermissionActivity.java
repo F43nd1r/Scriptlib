@@ -31,6 +31,9 @@ public class PermissionActivity extends Activity {
                 Intent intent = new Intent(context, PermissionActivity.class);
                 intent.putExtra(ID, id);
                 intent.putExtra(PERMISSION, permission);
+                if (!(context instanceof Activity)) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                }
                 context.startActivity(intent);
             } else {
                 callback.handlePermissionResult(true);

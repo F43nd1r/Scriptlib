@@ -1,5 +1,6 @@
 package com.faendir.lightning_launcher.scriptlib;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -97,10 +98,17 @@ public class ResponseManager {
                                 ScriptManager.logger.log("Resolving Play Store...");
                                 if (context.getPackageManager().resolveActivity(playStore, 0) != null) {
                                     ScriptManager.logger.log("Forwarding to Play Store...");
+                                    if (!(context instanceof Activity)) {
+                                        playStore.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    }
                                     context.startActivity(playStore);
                                 } else {
                                     ScriptManager.logger.log("Play Store not resolved, forwarding to browser...");
-                                    context.startActivity(new Intent(Intent.ACTION_VIEW, ALTERNATIVE_URI));
+                                    Intent browser = new Intent(Intent.ACTION_VIEW, ALTERNATIVE_URI);
+                                    if (!(context instanceof Activity)) {
+                                        browser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    }
+                                    context.startActivity(browser);
                                 }
                             } else {
                                 ScriptManager.logger.log("User denied install");

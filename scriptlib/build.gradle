@@ -13,14 +13,14 @@ ext {
     siteUrl = 'https://github.com/F43nd1r/Scriptlib'
     gitUrl = 'https://github.com/F43nd1r/Scriptlib.git'
 
-    libraryVersion = "2.1-RC4"
-    versionCode = 32
+    libraryVersion = "2.1-RC5"
+    versionCode = 33
     sdkVersion = 24
     supportVersion = "24.0.0"
 
     developerId = 'f43nd1r'
     developerName = 'Lukas Morawietz'
-    developerEmail = 'lukas.morawietz@gmail.com'
+    developerEmail = 'support@faendir.com'
 
     licenseName = 'The Apache Software License, Version 2.0'
     licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
