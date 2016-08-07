@@ -13,8 +13,8 @@ ext {
     siteUrl = 'https://github.com/F43nd1r/Scriptlib'
     gitUrl = 'https://github.com/F43nd1r/Scriptlib.git'
 
-    libraryVersion = "2.1-RC5"
-    versionCode = 33
+    libraryVersion = "2.1"
+    versionCode = 34
     sdkVersion = 24
     supportVersion = "24.0.0"
 

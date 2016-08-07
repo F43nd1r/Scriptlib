@@ -2,6 +2,9 @@ package com.faendir.lightning_launcher.scriptlib;
 
 import android.support.annotation.IntDef;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /**
  * Matches http://www.lightninglauncher.com/scripting/reference/api/reference/net/pierrox/lightning_launcher/script/api/EventHandler.html
  */
@@ -51,6 +54,7 @@ import android.support.annotation.IntDef;
         Action.HIDE_FLOATING_DESKTOP,
         Action.OPEN_HIERARCHY_SCREEN
 })
+@Retention(RetentionPolicy.CLASS)
 public @interface Action {
     int UNSET = 0;
     int NOTHING = 1;
