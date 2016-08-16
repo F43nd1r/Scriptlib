@@ -13,8 +13,8 @@ ext {
     siteUrl = 'https://github.com/F43nd1r/Scriptlib'
     gitUrl = 'https://github.com/F43nd1r/Scriptlib.git'
 
-    libraryVersion = "2.1"
-    versionCode = 34
+    libraryVersion = "2.2-SNAPSHOT"
+    versionCode = 35
     sdkVersion = 24
     supportVersion = "24.0.0"
 
@@ -48,27 +48,16 @@ android {
         }
     }
 }
-
-configurations {
-    javadocDeps
-}
-repositories {
-    flatDir {
-        dirs 'libs'
-    }
-}
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
     compile "com.android.support:support-annotations:$supportVersion"
-    javadocDeps "com.android.support:support-annotations:$supportVersion"
+    compile 'org.apache.commons:commons-lang3:3.4'
 }
 
 
-apply from: 'installv1.gradle'
-apply from: 'bintrayv1.gradle'
+apply from: 'install.gradle'
+apply from: 'upload.gradle'
 
 /* how to upload: [terminal]
-* gradlew install
 * gradlew bintrayUpload
 */
 

@@ -90,7 +90,7 @@ public class ServiceManager {
         }
     }
 
-    BindResult bind()  {
+    BindResult bind() {
         if (version >= MIN_SERVICE_VERSION) {
             if (connection.getService() == null && !isBinding) {
                 isBinding = true;
@@ -119,6 +119,7 @@ public class ServiceManager {
     void unbind() {
         try {
             context.unbindService(connection);
+            connection.clear();
         } catch (IllegalArgumentException e) {
             logger.warn("Trying to unbind while not bound.");
         }
@@ -150,7 +151,14 @@ public class ServiceManager {
         }
 
         ILightningService getService() {
+            if (service != null && !service.asBinder().isBinderAlive()) {
+                service = null;
+            }
             return service;
+        }
+
+        void clear() {
+            service = null;
         }
     }
 
@@ -296,9 +304,9 @@ public class ServiceManager {
             getService().runScriptForResult(code, callback);
             //noinspection SynchronizationOnLocalVariableOrMethodParameter
             synchronized (callback) {
-                while (callback.running) {
+                while (callback.running && callback.asBinder().isBinderAlive()) {
                     try {
-                        callback.wait();
+                        callback.wait(1000);
                     } catch (InterruptedException ignored) {
                     }
                 }

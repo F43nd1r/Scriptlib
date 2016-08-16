@@ -8,6 +8,8 @@ import android.support.annotation.WorkerThread;
 import com.faendir.lightning_launcher.scriptlib.ServiceManager;
 import com.trianguloy.llscript.repository.aidl.Script;
 
+import org.apache.commons.lang3.StringEscapeUtils;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,13 +57,13 @@ public class DirectScriptExecutor implements Executor<String> {
     @WorkerThread
     @Override
     public String execute(@NonNull ServiceManager serviceManager) {
-        if(code == null){
+        if (code == null) {
             code = Script.rawResourceToString(serviceManager.getContext(), codeRes);
         }
         StringBuilder builder = new StringBuilder();
         for (Map.Entry<String, String> entry : variables.entrySet()) {
             builder.append("var ").append(entry.getKey()).append(" = ")
-                    .append(entry.getValue() == null ? "null" : entry.getValue()).append(";\n");
+                    .append(entry.getValue() == null ? "null" : "\"" + StringEscapeUtils.escapeJava(entry.getValue()) + "\"").append(";\n");
         }
         builder.append(code);
         return serviceManager.runScriptForResult(builder.toString());
