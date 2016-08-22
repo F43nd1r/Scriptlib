@@ -55,8 +55,10 @@ public class ScriptManager {
      *
      * @param script the script
      * @return the id of the loaded script
+     * @deprecated use {@link #execute(Executor)} with {@link ScriptLoader} instead
      */
     @WorkerThread
+    @Deprecated
     public int loadScript(@NonNull Script script) {
         return loadScript(script, true);
     }
@@ -67,8 +69,10 @@ public class ScriptManager {
      * @param script      the script
      * @param forceUpdate if they script should be updated even if there is already a script with the same name
      * @return the id of the loaded script
+     * @deprecated use {@link #execute(Executor)} with {@link ScriptLoader} instead
      */
     @WorkerThread
+    @Deprecated
     public int loadScript(@NonNull Script script, boolean forceUpdate) {
         logger.log("LoadScript");
         return new ScriptLoader(script).setForceUpdate(forceUpdate).execute(serviceManager);
@@ -79,8 +83,10 @@ public class ScriptManager {
      *
      * @param id   ID of the script
      * @param data Additional Data passed to the script (Returned by LL.getEvent().getData()). may be null or empty
+     * @deprecated use {@link #execute(Executor)} with {@link ScriptExecutor} instead
      */
     @WorkerThread
+    @Deprecated
     public void runScript(int id, @Nullable String data) {
         runScript(id, data, false);
     }
@@ -91,8 +97,10 @@ public class ScriptManager {
      * @param id         ID of the script
      * @param data       Additional Data passed to the script (Returned by LL.getEvent().getData()). may be null or empty
      * @param background if the script should be run in the background
+     * @deprecated use {@link #execute(Executor)} with {@link ScriptExecutor} instead
      */
     @WorkerThread
+    @Deprecated
     public void runScript(int id, @Nullable String data, boolean background) {
         logger.log("runScript");
         new ScriptExecutor(id).setData(data).setBackground(background).execute(serviceManager);
@@ -103,8 +111,10 @@ public class ScriptManager {
      *
      * @param code script code. last line has to be "return [some_string]"
      * @return the result string
+     * @deprecated use {@link #execute(Executor)} with {@link DirectScriptExecutor} instead
      */
     @WorkerThread
+    @Deprecated
     public String runScriptForResult(@NonNull String code) {
         logger.log("runScriptForResult");
         return new DirectScriptExecutor(code).execute(serviceManager);
@@ -117,7 +127,10 @@ public class ScriptManager {
      * @param code script code resource id. last line has to be "return [some_string]"
      * @param data this will be available in the script as variable "data" (not LL.getEvent().getData()!)
      * @return the result string
+     * @deprecated use {@link #execute(Executor)} with {@link DirectScriptExecutor} instead
      */
+    @WorkerThread
+    @Deprecated
     public String runScriptForResult(@RawRes int code, @Nullable String data) {
         return new DirectScriptExecutor(code).putVariable("data", data).execute(serviceManager);
     }
@@ -128,7 +141,10 @@ public class ScriptManager {
      * @param code      script code resource id. last line has to be "return [some_string]"
      * @param variables a map of variable names and their values, which will be available in the script
      * @return the result string
+     * @deprecated use {@link #execute(Executor)} with {@link DirectScriptExecutor} instead
      */
+    @WorkerThread
+    @Deprecated
     public String runScriptForResult(@RawRes int code, @NonNull Map<String, String> variables) {
         return new DirectScriptExecutor(code).putVariables(variables).execute(serviceManager);
     }
@@ -139,8 +155,10 @@ public class ScriptManager {
      * @param actionId   ID of the action as defined by LL. {@link Action}
      * @param data       optional data
      * @param background if the action should be executed in background (not all actions make sense in the background)
+     * @deprecated use {@link #execute(Executor)} with {@link ActionExecutor} instead
      */
     @WorkerThread
+    @Deprecated
     public void runAction(@Action int actionId, @Nullable String data, boolean background) {
         logger.log("runAction");
         new ActionExecutor(actionId).setData(data).setBackground(background).execute(serviceManager);
