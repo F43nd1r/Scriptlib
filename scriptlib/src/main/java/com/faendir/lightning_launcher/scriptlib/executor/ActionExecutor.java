@@ -7,11 +7,11 @@ import com.faendir.lightning_launcher.scriptlib.Action;
 import com.faendir.lightning_launcher.scriptlib.ServiceManager;
 
 /**
- * Created on 25.07.2016.
+ * Executes an Action in LL
  *
  * @author F43nd1r
+ * @since 25.07.2016
  */
-
 public class ActionExecutor implements Executor<Void> {
     @Action
     private final int action;

@@ -13,10 +13,10 @@ ext {
     siteUrl = 'https://github.com/F43nd1r/Scriptlib'
     gitUrl = 'https://github.com/F43nd1r/Scriptlib.git'
 
-    libraryVersion = "2.2"
+    libraryVersion = "2.3-SNAPSHOT"
     versionCode = 36
     sdkVersion = 24
-    supportVersion = "24.0.0"
+    supportVersion = "24.2.1"
 
     developerId = 'f43nd1r'
     developerName = 'Lukas Morawietz'
@@ -29,7 +29,7 @@ ext {
 
 android {
     compileSdkVersion sdkVersion
-    buildToolsVersion '24'
+    buildToolsVersion '24.0.2'
 
     defaultConfig {
         minSdkVersion 8

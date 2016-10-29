@@ -34,7 +34,7 @@ import static com.faendir.lightning_launcher.scriptlib.ScriptManager.logger;
 public class ServiceManager {
 
     private static final String INTENT = "net.pierrox.lightning_launcher.script.IMPORT";
-    private static final int MIN_SERVICE_VERSION = 30;
+    private static final int MIN_SERVICE_VERSION = 34;
 
     private final ServiceInfo serviceInfo;
     private final int version;
