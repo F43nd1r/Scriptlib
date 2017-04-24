@@ -1,13 +1,14 @@
 package com.faendir.lightning_launcher.scriptlib;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.faendir.lightning_launcher.scriptlib.executor.Executor;
+import com.trianguloy.llscript.repository.aidl.ILightningService;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created on 25.07.2016.
@@ -16,41 +17,36 @@ import java.util.Map;
  */
 
 public class AsyncExecutorService {
-    private final ServiceManager serviceManager;
-    private final LinkedHashMap<Executor, ResultCallback> map;
-    private ResultCallback<BindResult> bindResultHandler;
+    @NonNull
+    private final Context context;
+    private final ServiceManager2 serviceManager;
+    private final ExceptionHandler exceptionHandler;
+    private final Logger logger;
+    private final List<ExecutorWithCallback<?>> list;
     private boolean keepAlive;
+    private ILightningService lightningService;
 
-    public AsyncExecutorService(@NonNull ServiceManager serviceManager, ResponseManager responseManager) {
+    public AsyncExecutorService(@NonNull Context context, @NonNull ServiceManager2 serviceManager, ExceptionHandler exceptionHandler, Logger logger) {
+        this.context = context;
         this.serviceManager = serviceManager;
-        map = new LinkedHashMap<>();
-        bindResultHandler = new DefaultBindResultHandler(responseManager);
+        this.exceptionHandler = exceptionHandler;
+        this.logger = logger;
+        list = new ArrayList<>();
         keepAlive = false;
     }
 
     public void start() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                BindResult r = serviceManager.bind();
-                if(bindResultHandler != null) bindResultHandler.onResult(r);
-                if(r == BindResult.OK) {
-                    for (Iterator<Map.Entry<Executor, ResultCallback>> iterator = map.entrySet().iterator(); iterator.hasNext(); ) {
-                        Map.Entry<Executor, ResultCallback> entry = iterator.next();
-                        Object result = entry.getKey().execute(serviceManager);
-                        if (entry.getValue() != null) {
-                            //noinspection unchecked
-                            entry.getValue().onResult(result);
-                        }
-                        iterator.remove();
-                    }
-                    if(!keepAlive) {
-                        serviceManager.unbind();
-                    }
+        if(lightningService != null && lightningService.asBinder().isBinderAlive()){
+            next();
+        }else {
+            serviceManager.bind(exceptionHandler, new ResultCallback<ILightningService>() {
+                @Override
+                public void onResult(ILightningService result) {
+                    lightningService = result;
+                    next();
                 }
-
-            }
-        }).start();
+            });
+        }
     }
 
     public AsyncExecutorService add(@NonNull Executor executor) {
@@ -58,18 +54,54 @@ public class AsyncExecutorService {
     }
 
     public <T> AsyncExecutorService add(@NonNull Executor<T> executor, @Nullable ResultCallback<T> callback) {
-        map.put(executor, callback);
+        list.add(new ExecutorWithCallback<>(executor, callback));
         return this;
     }
 
-    public AsyncExecutorService setKeepAliveAfterwards(boolean keepAlive){
+    public AsyncExecutorService setKeepAliveAfterwards(boolean keepAlive) {
         this.keepAlive = keepAlive;
         return this;
     }
 
-    public AsyncExecutorService setBindResultHandler(ResultCallback<BindResult> bindResultHandler) {
-        this.bindResultHandler = bindResultHandler;
-        return this;
+    public void unbind() {
+        logger.log("unbind");
+        serviceManager.unbind();
     }
 
+    private void next() {
+        if (!list.isEmpty()) {
+            execute(list.get(0));
+        } else if (!keepAlive) {
+            serviceManager.unbind();
+        }
+    }
+
+    private <T> void execute(final ExecutorWithCallback<T> entry) {
+        entry.getExecutor().execute(context, lightningService, exceptionHandler, logger, new ResultCallback<T>() {
+            @Override
+            public void onResult(T result) {
+                entry.getResultCallback().onResult(result);
+                list.remove(entry);
+                next();
+            }
+        });
+    }
+
+    private static class ExecutorWithCallback<T> {
+        private final Executor<T> executor;
+        private final ResultCallback<T> resultCallback;
+
+        private ExecutorWithCallback(Executor<T> executor, ResultCallback<T> resultCallback) {
+            this.executor = executor;
+            this.resultCallback = resultCallback;
+        }
+
+        Executor<T> getExecutor() {
+            return executor;
+        }
+
+        ResultCallback<T> getResultCallback() {
+            return resultCallback;
+        }
+    }
 }

@@ -1,10 +1,14 @@
 package com.faendir.lightning_launcher.scriptlib.executor;
 
+import android.content.Context;
+import android.os.RemoteException;
 import android.support.annotation.NonNull;
-import android.support.annotation.WorkerThread;
 
 import com.faendir.lightning_launcher.scriptlib.Action;
-import com.faendir.lightning_launcher.scriptlib.ServiceManager;
+import com.faendir.lightning_launcher.scriptlib.ExceptionHandler;
+import com.faendir.lightning_launcher.scriptlib.Logger;
+import com.faendir.lightning_launcher.scriptlib.ResultCallback;
+import com.trianguloy.llscript.repository.aidl.ILightningService;
 
 /**
  * Executes an Action in LL
@@ -34,10 +38,14 @@ public class ActionExecutor implements Executor<Void> {
         return this;
     }
 
-    @WorkerThread
     @Override
-    public Void execute(@NonNull ServiceManager serviceManager) {
-        serviceManager.runAction(action, data, background);
-        return null;
+    public void execute(@NonNull Context context, @NonNull ILightningService lightningService,
+                        @NonNull ExceptionHandler exceptionHandler, @NonNull Logger logger, @NonNull ResultCallback<Void> listener) {
+        try {
+            lightningService.runAction(action, data, background);
+            listener.onResult(null);
+        } catch (RemoteException e) {
+            exceptionHandler.onException(e);
+        }
     }
 }

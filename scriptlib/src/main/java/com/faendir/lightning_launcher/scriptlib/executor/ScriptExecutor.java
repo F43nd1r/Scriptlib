@@ -1,9 +1,13 @@
 package com.faendir.lightning_launcher.scriptlib.executor;
 
+import android.content.Context;
+import android.os.RemoteException;
 import android.support.annotation.NonNull;
-import android.support.annotation.WorkerThread;
 
-import com.faendir.lightning_launcher.scriptlib.ServiceManager;
+import com.faendir.lightning_launcher.scriptlib.ExceptionHandler;
+import com.faendir.lightning_launcher.scriptlib.Logger;
+import com.faendir.lightning_launcher.scriptlib.ResultCallback;
+import com.trianguloy.llscript.repository.aidl.ILightningService;
 
 /**
  * Created on 25.07.2016.
@@ -22,13 +26,6 @@ public class ScriptExecutor implements Executor<Void> {
         background = false;
     }
 
-    @WorkerThread
-    @Override
-    public Void execute(@NonNull ServiceManager serviceManager) {
-        serviceManager.runScript(scriptId, data, background);
-        return null;
-    }
-
     public ScriptExecutor setBackground(boolean background) {
         this.background = background;
         return this;
@@ -37,5 +34,19 @@ public class ScriptExecutor implements Executor<Void> {
     public ScriptExecutor setData(String data) {
         this.data = data;
         return this;
+    }
+
+    @Override
+    public void execute(@NonNull Context context, @NonNull ILightningService lightningService,
+                        @NonNull ExceptionHandler exceptionHandler, @NonNull Logger logger, @NonNull ResultCallback<Void> listener) {
+        if (scriptId < 0)
+            logger.warn("Running script with negative id. Are you sure this is what you want to do?");
+        try {
+            logger.log("run script " + scriptId);
+            lightningService.runScript(scriptId, data, background);
+            listener.onResult(null);
+        } catch (RemoteException e) {
+            exceptionHandler.onException(e);
+        }
     }
 }

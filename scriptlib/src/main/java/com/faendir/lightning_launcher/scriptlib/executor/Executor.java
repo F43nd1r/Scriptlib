@@ -1,9 +1,13 @@
 package com.faendir.lightning_launcher.scriptlib.executor;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.WorkerThread;
 
-import com.faendir.lightning_launcher.scriptlib.ServiceManager;
+import com.faendir.lightning_launcher.scriptlib.ExceptionHandler;
+import com.faendir.lightning_launcher.scriptlib.Logger;
+import com.faendir.lightning_launcher.scriptlib.ResultCallback;
+import com.trianguloy.llscript.repository.aidl.ILightningService;
 
 /**
  * Created on 25.07.2016.
@@ -13,5 +17,6 @@ import com.faendir.lightning_launcher.scriptlib.ServiceManager;
 
 public interface Executor<T> {
     @WorkerThread
-    T execute(@NonNull ServiceManager serviceManager);
+    void execute(@NonNull Context context, @NonNull ILightningService lightningService,
+                 @NonNull ExceptionHandler exceptionHandler, @NonNull Logger logger, @NonNull ResultCallback<T> listener);
 }

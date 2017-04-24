@@ -7,9 +7,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.ResultReceiver;
 import android.support.annotation.NonNull;
-
-import java.util.HashMap;
 
 /**
  * Created by Lukas on 17.11.2015.
@@ -17,19 +16,14 @@ import java.util.HashMap;
  * we need this activity. This activity should never be started from outside. Instead, call the static Method.
  */
 public class PermissionActivity extends Activity {
-    private static final String ID = "id";
+    private static final String CALLBACK = "callback";
     private static final String PERMISSION = "permission";
-
-    private static final HashMap<Integer, PermissionCallback> callbacks = new HashMap<>();
-    private static int nextId = 0;
 
     public static void checkForPermission(@NonNull Context context, String permission, PermissionCallback callback) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
-                int id = nextId++;
-                callbacks.put(id, callback);
                 Intent intent = new Intent(context, PermissionActivity.class);
-                intent.putExtra(ID, id);
+                intent.putExtra(CALLBACK, callback);
                 intent.putExtra(PERMISSION, permission);
                 if (!(context instanceof Activity)) {
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -43,15 +37,15 @@ public class PermissionActivity extends Activity {
         }
     }
 
-    private int id;
+    private PermissionCallback callback;
     private String permission;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Intent intent = getIntent();
-        if (intent.hasExtra(ID) && intent.hasExtra(PERMISSION)) {
-            id = intent.getIntExtra(ID, -1);
+        if (intent.hasExtra(CALLBACK) && intent.hasExtra(PERMISSION)) {
+            callback = intent.getParcelableExtra(CALLBACK);
             permission = intent.getStringExtra(PERMISSION);
             requestPermission();
         } else finish();
@@ -65,12 +59,20 @@ public class PermissionActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        callbacks.get(id).handlePermissionResult(grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED);
-        callbacks.remove(id);
+        callback.send(grantResults[0], null);
         finish();
     }
 
-    public interface PermissionCallback {
-        void handlePermissionResult(boolean isGranted);
+    public static abstract class PermissionCallback extends ResultReceiver{
+        public PermissionCallback() {
+            super(null);
+        }
+
+        abstract void handlePermissionResult(boolean isGranted);
+
+        @Override
+        protected void onReceiveResult(int resultCode, Bundle resultData) {
+            handlePermissionResult(resultCode == PackageManager.PERMISSION_GRANTED);
+        }
     }
 }

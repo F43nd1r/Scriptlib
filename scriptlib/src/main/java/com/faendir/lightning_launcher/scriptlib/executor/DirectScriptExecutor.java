@@ -1,11 +1,18 @@
 package com.faendir.lightning_launcher.scriptlib.executor;
 
+import android.content.Context;
+import android.os.RemoteException;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RawRes;
-import android.support.annotation.WorkerThread;
 
-import com.faendir.lightning_launcher.scriptlib.ServiceManager;
+import com.faendir.lightning_launcher.scriptlib.ExceptionHandler;
+import com.faendir.lightning_launcher.scriptlib.Logger;
+import com.faendir.lightning_launcher.scriptlib.ResultCallback;
+import com.faendir.lightning_launcher.scriptlib.exception.FailureException;
+import com.trianguloy.llscript.repository.aidl.Failure;
+import com.trianguloy.llscript.repository.aidl.ILightningService;
+import com.trianguloy.llscript.repository.aidl.IResultCallback;
 import com.trianguloy.llscript.repository.aidl.Script;
 
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -35,14 +42,6 @@ public class DirectScriptExecutor implements Executor<String> {
         code = null;
     }
 
-    private static String loadCode(@NonNull ServiceManager serviceManager, @RawRes int codeRes) {
-        String code = Script.rawResourceToString(serviceManager.getContext(), codeRes);
-        if (code == null) {
-            code = "return null;";
-        }
-        return code;
-    }
-
     public DirectScriptExecutor putVariable(@NonNull String name, @Nullable String value) {
         variables.put(name, value);
         return this;
@@ -53,12 +52,11 @@ public class DirectScriptExecutor implements Executor<String> {
         return this;
     }
 
-
-    @WorkerThread
     @Override
-    public String execute(@NonNull ServiceManager serviceManager) {
+    public void execute(@NonNull Context context, @NonNull ILightningService lightningService,
+                        @NonNull final ExceptionHandler exceptionHandler, @NonNull final Logger logger, @NonNull final ResultCallback<String> listener) {
         if (code == null) {
-            code = Script.rawResourceToString(serviceManager.getContext(), codeRes);
+            code = Script.rawResourceToString(context, codeRes);
         }
         StringBuilder builder = new StringBuilder();
         for (Map.Entry<String, String> entry : variables.entrySet()) {
@@ -66,6 +64,21 @@ public class DirectScriptExecutor implements Executor<String> {
                     .append(entry.getValue() == null ? "null" : "\"" + StringEscapeUtils.escapeJava(entry.getValue()) + "\"").append(";\n");
         }
         builder.append(code);
-        return serviceManager.runScriptForResult(builder.toString());
+        try {
+            lightningService.runScriptForResult(builder.toString(), new IResultCallback.Stub() {
+                @Override
+                public void onResult(String result) throws RemoteException {
+                    logger.log("Result received");
+                    listener.onResult(result);
+                }
+
+                @Override
+                public void onFailure(Failure failure) throws RemoteException {
+                    exceptionHandler.onException(new FailureException(failure));
+                }
+            });
+        } catch (RemoteException e) {
+            exceptionHandler.onException(e);
+        }
     }
 }

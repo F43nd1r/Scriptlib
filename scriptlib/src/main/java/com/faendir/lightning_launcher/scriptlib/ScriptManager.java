@@ -1,20 +1,7 @@
 package com.faendir.lightning_launcher.scriptlib;
 
 import android.content.Context;
-import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RawRes;
-import android.support.annotation.WorkerThread;
-
-import com.faendir.lightning_launcher.scriptlib.executor.ActionExecutor;
-import com.faendir.lightning_launcher.scriptlib.executor.DirectScriptExecutor;
-import com.faendir.lightning_launcher.scriptlib.executor.Executor;
-import com.faendir.lightning_launcher.scriptlib.executor.ScriptExecutor;
-import com.faendir.lightning_launcher.scriptlib.executor.ScriptLoader;
-import com.trianguloy.llscript.repository.aidl.Script;
-
-import java.util.Map;
 
 /**
  * Created on 18.06.2016.
@@ -26,167 +13,30 @@ import java.util.Map;
 public class ScriptManager {
 
     static Logger logger = new DefaultLogger();
-    private ResponseManager responseManager;
-    private final ServiceManager serviceManager;
+    private final ServiceManager2 serviceManager;
+    private final Context context;
 
     public ScriptManager(Context context) {
-        responseManager = new ResponseManager(context);
-        serviceManager = new ServiceManager(context, responseManager);
-    }
-
-    @CheckResult
-    @WorkerThread
-    public BindResult bind() {
-        logger.log("bind");
-        BindResult result = serviceManager.bind();
-        new DefaultBindResultHandler(responseManager).onResult(result);
-        return result;
-    }
-
-    public void unbind() {
-        logger.log("unbind");
-        serviceManager.unbind();
-    }
-
-    /* Public API */
-
-    /**
-     * loads (or updates) a script in LL
-     *
-     * @param script the script
-     * @return the id of the loaded script
-     * @deprecated use {@link #execute(Executor)} with {@link ScriptLoader} instead
-     */
-    @WorkerThread
-    @Deprecated
-    public int loadScript(@NonNull Script script) {
-        return loadScript(script, true);
-    }
-
-    /**
-     * loads (or updates) a script in LL
-     *
-     * @param script      the script
-     * @param forceUpdate if they script should be updated even if there is already a script with the same name
-     * @return the id of the loaded script
-     * @deprecated use {@link #execute(Executor)} with {@link ScriptLoader} instead
-     */
-    @WorkerThread
-    @Deprecated
-    public int loadScript(@NonNull Script script, boolean forceUpdate) {
-        logger.log("LoadScript");
-        return new ScriptLoader(script).setForceUpdate(forceUpdate).execute(serviceManager);
-    }
-
-    /**
-     * Runs a script in LL (LL opens in the process)
-     *
-     * @param id   ID of the script
-     * @param data Additional Data passed to the script (Returned by LL.getEvent().getData()). may be null or empty
-     * @deprecated use {@link #execute(Executor)} with {@link ScriptExecutor} instead
-     */
-    @WorkerThread
-    @Deprecated
-    public void runScript(int id, @Nullable String data) {
-        runScript(id, data, false);
-    }
-
-    /**
-     * Runs a script in LL
-     *
-     * @param id         ID of the script
-     * @param data       Additional Data passed to the script (Returned by LL.getEvent().getData()). may be null or empty
-     * @param background if the script should be run in the background
-     * @deprecated use {@link #execute(Executor)} with {@link ScriptExecutor} instead
-     */
-    @WorkerThread
-    @Deprecated
-    public void runScript(int id, @Nullable String data, boolean background) {
-        logger.log("runScript");
-        new ScriptExecutor(id).setData(data).setBackground(background).execute(serviceManager);
-    }
-
-    /**
-     * run a script without importing it and receive a result string
-     *
-     * @param code script code. last line has to be "return [some_string]"
-     * @return the result string
-     * @deprecated use {@link #execute(Executor)} with {@link DirectScriptExecutor} instead
-     */
-    @WorkerThread
-    @Deprecated
-    public String runScriptForResult(@NonNull String code) {
-        logger.log("runScriptForResult");
-        return new DirectScriptExecutor(code).execute(serviceManager);
-    }
-
-    /**
-     * run a script without importing it and receive a result string.
-     * Note that this is only a shortcut method for {@link #runScriptForResult(int, Map)} with one "data" entry
-     *
-     * @param code script code resource id. last line has to be "return [some_string]"
-     * @param data this will be available in the script as variable "data" (not LL.getEvent().getData()!)
-     * @return the result string
-     * @deprecated use {@link #execute(Executor)} with {@link DirectScriptExecutor} instead
-     */
-    @WorkerThread
-    @Deprecated
-    public String runScriptForResult(@RawRes int code, @Nullable String data) {
-        return new DirectScriptExecutor(code).putVariable("data", data).execute(serviceManager);
-    }
-
-    /**
-     * run a script without importing it and receive a result string
-     *
-     * @param code      script code resource id. last line has to be "return [some_string]"
-     * @param variables a map of variable names and their values, which will be available in the script
-     * @return the result string
-     * @deprecated use {@link #execute(Executor)} with {@link DirectScriptExecutor} instead
-     */
-    @WorkerThread
-    @Deprecated
-    public String runScriptForResult(@RawRes int code, @NonNull Map<String, String> variables) {
-        return new DirectScriptExecutor(code).putVariables(variables).execute(serviceManager);
-    }
-
-    /**
-     * run an action in LL
-     *
-     * @param actionId   ID of the action as defined by LL. {@link Action}
-     * @param data       optional data
-     * @param background if the action should be executed in background (not all actions make sense in the background)
-     * @deprecated use {@link #execute(Executor)} with {@link ActionExecutor} instead
-     */
-    @WorkerThread
-    @Deprecated
-    public void runAction(@Action int actionId, @Nullable String data, boolean background) {
-        logger.log("runAction");
-        new ActionExecutor(actionId).setData(data).setBackground(background).execute(serviceManager);
-    }
-
-    @WorkerThread
-    public <T> T execute(Executor<T> executor) {
-        return executor.execute(serviceManager);
+        serviceManager = new ServiceManager2(context);
+        this.context = context;
     }
 
     public AsyncExecutorService getAsyncExecutorService() {
-        return new AsyncExecutorService(serviceManager, responseManager);
+        return getAsyncExecutorService(new BaseExceptionHandler(context));
+    }
+
+    public AsyncExecutorService getAsyncExecutorService(ExceptionHandler exceptionHandler) {
+        return new AsyncExecutorService(context, serviceManager, exceptionHandler, logger);
     }
 
     /**
      * enables extensive logging
+     *
+     * @return this instance
      */
-    public void enableDebug() {
+    public ScriptManager enableDebug() {
         logger.setDebug(true);
-    }
-
-    public ResponseManager getResponseManager() {
-        return responseManager;
-    }
-
-    public void setResponseManager(ResponseManager responseManager) {
-        this.responseManager = responseManager;
-        serviceManager.setResponseManager(responseManager);
+        return this;
     }
 
     /**
