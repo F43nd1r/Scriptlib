@@ -137,7 +137,7 @@ public class BaseExceptionHandler implements ExceptionHandler {
     }
 
     @Override
-    public void onException(Exception e) {
+    public final void onException(Exception e) {
         if (e instanceof RepositoryImporterMissingException) {
             noImporter();
         } else if (e instanceof RepositoryImporterOutdatedException) {

@@ -19,11 +19,16 @@ public class PermissionActivity extends Activity {
     private static final String CALLBACK = "callback";
     private static final String PERMISSION = "permission";
 
-    public static void checkForPermission(@NonNull Context context, String permission, PermissionCallback callback) {
+    public static void checkForPermission(@NonNull Context context, String permission, final PermissionCallback callback) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
                 Intent intent = new Intent(context, PermissionActivity.class);
-                intent.putExtra(CALLBACK, callback);
+                intent.putExtra(CALLBACK, new ResultReceiver(null){
+                    @Override
+                    protected void onReceiveResult(int resultCode, Bundle resultData) {
+                        callback.handlePermissionResult(resultCode == PackageManager.PERMISSION_GRANTED);
+                    }
+                });
                 intent.putExtra(PERMISSION, permission);
                 if (!(context instanceof Activity)) {
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -37,7 +42,7 @@ public class PermissionActivity extends Activity {
         }
     }
 
-    private PermissionCallback callback;
+    private ResultReceiver callback;
     private String permission;
 
     @Override
@@ -63,16 +68,7 @@ public class PermissionActivity extends Activity {
         finish();
     }
 
-    public static abstract class PermissionCallback extends ResultReceiver{
-        public PermissionCallback() {
-            super(null);
-        }
-
-        abstract void handlePermissionResult(boolean isGranted);
-
-        @Override
-        protected void onReceiveResult(int resultCode, Bundle resultData) {
-            handlePermissionResult(resultCode == PackageManager.PERMISSION_GRANTED);
-        }
+    public interface PermissionCallback {
+        void handlePermissionResult(boolean isGranted);
     }
 }
