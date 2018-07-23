@@ -94,7 +94,7 @@ public class Script implements Parcelable {
         if (code == null || code.equals("") || name == null || name.equals("") || name.length() > 100) {
             return false;
         }
-        Pattern pattern = Pattern.compile("[<>:\"/\\|\\?\\*\\n\\t\\\\]", Pattern.CASE_INSENSITIVE);
+        Pattern pattern = Pattern.compile("[<>:\"/|?*\\n\\t\\\\]", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(name);
         return !matcher.find();
         //TODO also check code

@@ -38,17 +38,14 @@ public class AsyncExecutorService {
         if(lightningService != null && lightningService.asBinder().isBinderAlive()){
             next();
         }else {
-            serviceManager.bind(exceptionHandler, new ResultCallback<ILightningService>() {
-                @Override
-                public void onResult(ILightningService result) {
-                    lightningService = result;
-                    next();
-                }
+            serviceManager.bind(exceptionHandler, result -> {
+                lightningService = result;
+                next();
             });
         }
     }
 
-    public AsyncExecutorService add(@NonNull Executor executor) {
+    public AsyncExecutorService add(@NonNull Executor<?> executor) {
         return add(executor, null);
     }
 
@@ -76,13 +73,10 @@ public class AsyncExecutorService {
     }
 
     private <T> void execute(final ExecutorWithCallback<T> entry) {
-        entry.getExecutor().execute(context, lightningService, exceptionHandler, logger, new ResultCallback<T>() {
-            @Override
-            public void onResult(T result) {
-                entry.getResultCallback().onResult(result);
-                list.remove(entry);
-                next();
-            }
+        entry.getExecutor().execute(context, lightningService, exceptionHandler, logger, result -> {
+            entry.getResultCallback().onResult(result);
+            list.remove(entry);
+            next();
         });
     }
 

@@ -13,7 +13,7 @@ import com.trianguloy.llscript.repository.aidl.Failure;
 import com.trianguloy.llscript.repository.aidl.ILightningService;
 import com.trianguloy.llscript.repository.aidl.IResultCallback;
 import com.trianguloy.llscript.repository.aidl.Script;
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -65,13 +65,13 @@ public class DirectScriptExecutor implements Executor<String> {
         try {
             lightningService.runScriptForResult(builder.toString(), new IResultCallback.Stub() {
                 @Override
-                public void onResult(String result) throws RemoteException {
+                public void onResult(String result) {
                     logger.log("Result received");
                     listener.onResult(result);
                 }
 
                 @Override
-                public void onFailure(Failure failure) throws RemoteException {
+                public void onFailure(Failure failure) {
                     exceptionHandler.onException(new FailureException(failure));
                 }
             });

@@ -61,29 +61,22 @@ public class ScriptLoader implements Executor<Integer> {
             lightningService.importScript(script, forceUpdate, new IImportCallback.Stub() {
 
                 @Override
-                public void onFinish(int scriptId) throws RemoteException {
+                public void onFinish(int scriptId) {
                     listener.onResult(scriptId);
                     logger.log("Import finished");
                     if(runScript) {
                         new ScriptExecutor(scriptId)
                                 .setBackground(background)
                                 .setData(data)
-                                .execute(context, lightningService, exceptionHandler, logger, new ResultCallback<Void>() {
-                                    @Override
-                                    public void onResult(Void result) {
-                                    }
-                                });
+                                .execute(context, lightningService, exceptionHandler, logger, result -> {});
                     }
                 }
 
                 @Override
-                public void onFailure(Failure failure) throws RemoteException {
-                    exceptionHandler.onException(new FailureException(failure, new FailureException.Retry() {
-                        @Override
-                        public void retry() {
-                            setForceUpdate(true);
-                            execute(context, lightningService, exceptionHandler, logger, listener);
-                        }
+                public void onFailure(Failure failure) {
+                    exceptionHandler.onException(new FailureException(failure, () -> {
+                        setForceUpdate(true);
+                        execute(context, lightningService, exceptionHandler, logger, listener);
                     }));
                 }
             });

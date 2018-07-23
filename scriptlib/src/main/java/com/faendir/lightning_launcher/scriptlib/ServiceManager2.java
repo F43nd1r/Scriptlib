@@ -42,6 +42,7 @@ public class ServiceManager2 {
             logger.log("Service resolved");
             try {
                 PackageInfo packageInfo = context.getPackageManager().getPackageInfo(info.serviceInfo.packageName, 0);
+                //noinspection deprecation
                 version = packageInfo.versionCode;
                 logger.log("Service version: " + version);
                 serviceInfo = info.serviceInfo;
@@ -56,29 +57,26 @@ public class ServiceManager2 {
 
     void bind(final ExceptionHandler exceptionHandler, final ResultCallback<ILightningService> listener) {
         if (version >= MIN_SERVICE_VERSION) {
-            PermissionActivity.checkForPermission(context, "net.pierrox.lightning_launcher.IMPORT_SCRIPTS", new PermissionActivity.PermissionCallback() {
-                @Override
-                public void handlePermissionResult(boolean isGranted) {
-                    if (isGranted) {
-                        logger.log("Permission granted");
-                        Intent intent = new Intent(INTENT);
-                        intent.setClassName(serviceInfo.packageName, serviceInfo.name);
-                        logger.log("Binding service...");
-                        serviceConnection = new ServiceConnection() {
-                            @Override
-                            public void onServiceConnected(ComponentName name, IBinder service) {
-                                logger.log("Service bound");
-                                listener.onResult(ILightningService.Stub.asInterface(service));
-                            }
+            PermissionActivity.checkForPermission(context, "net.pierrox.lightning_launcher.IMPORT_SCRIPTS", isGranted -> {
+                if (isGranted) {
+                    logger.log("Permission granted");
+                    Intent intent = new Intent(INTENT);
+                    intent.setClassName(serviceInfo.packageName, serviceInfo.name);
+                    logger.log("Binding service...");
+                    serviceConnection = new ServiceConnection() {
+                        @Override
+                        public void onServiceConnected(ComponentName name, IBinder service) {
+                            logger.log("Service bound");
+                            listener.onResult(ILightningService.Stub.asInterface(service));
+                        }
 
-                            @Override
-                            public void onServiceDisconnected(ComponentName name) {
-                            }
-                        };
-                        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-                    } else {
-                        exceptionHandler.onException(new PermissionDeniedException());
-                    }
+                        @Override
+                        public void onServiceDisconnected(ComponentName name) {
+                        }
+                    };
+                    context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+                } else {
+                    exceptionHandler.onException(new PermissionDeniedException());
                 }
             });
         } else if (serviceInfo != null) {
