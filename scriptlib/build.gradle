@@ -22,10 +22,30 @@ dependencies {
     implementation 'org.apache.commons:commons-text:1.2'
 }
 
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs + files("${project.buildDir}/generated/source/aidl/release") + files("${project.buildDir}/generated/source/apt/release")
+    classpath += files(android.getBootClasspath().join(File.pathSeparator)) + files("${project.buildDir}/generated/source/r/release")
+    options.with {
+        linksOffline "http://d.android.com/reference", "${android.sdkDirectory.path}/docs/reference"
+    }
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    from javadoc
+    classifier = 'javadoc'
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
             from components.android
+            artifact sourcesJar
+            artifact javadocJar
             groupId = 'com.faendir.lightninglauncher'
             artifactId = 'scriptlib'
             version = version
