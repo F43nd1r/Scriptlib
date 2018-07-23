@@ -1,9 +1,8 @@
 package com.faendir.lightning_launcher.scriptlib.executor;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.WorkerThread;
-
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
 import com.faendir.lightning_launcher.scriptlib.ExceptionHandler;
 import com.faendir.lightning_launcher.scriptlib.Logger;
 import com.faendir.lightning_launcher.scriptlib.ResultCallback;

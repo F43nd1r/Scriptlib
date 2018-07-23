@@ -1,9 +1,8 @@
 package com.faendir.lightning_launcher.scriptlib;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.faendir.lightning_launcher.scriptlib.executor.Executor;
 import com.trianguloy.llscript.repository.aidl.ILightningService;
 

@@ -2,8 +2,7 @@ package com.faendir.lightning_launcher.scriptlib.executor;
 
 import android.content.Context;
 import android.os.RemoteException;
-import android.support.annotation.NonNull;
-
+import androidx.annotation.NonNull;
 import com.faendir.lightning_launcher.scriptlib.Action;
 import com.faendir.lightning_launcher.scriptlib.ExceptionHandler;
 import com.faendir.lightning_launcher.scriptlib.Logger;

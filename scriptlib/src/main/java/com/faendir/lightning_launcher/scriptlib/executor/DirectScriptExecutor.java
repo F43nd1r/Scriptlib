@@ -2,10 +2,9 @@ package com.faendir.lightning_launcher.scriptlib.executor;
 
 import android.content.Context;
 import android.os.RemoteException;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RawRes;
-
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RawRes;
 import com.faendir.lightning_launcher.scriptlib.ExceptionHandler;
 import com.faendir.lightning_launcher.scriptlib.Logger;
 import com.faendir.lightning_launcher.scriptlib.ResultCallback;
@@ -14,7 +13,6 @@ import com.trianguloy.llscript.repository.aidl.Failure;
 import com.trianguloy.llscript.repository.aidl.ILightningService;
 import com.trianguloy.llscript.repository.aidl.IResultCallback;
 import com.trianguloy.llscript.repository.aidl.Script;
-
 import org.apache.commons.lang3.StringEscapeUtils;
 
 import java.util.HashMap;

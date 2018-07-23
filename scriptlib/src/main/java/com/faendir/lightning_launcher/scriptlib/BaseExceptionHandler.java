@@ -10,11 +10,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ResultReceiver;
-import android.support.annotation.NonNull;
-import android.support.annotation.StringRes;
-import android.support.annotation.StyleRes;
 import android.widget.Toast;
-
+import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
+import androidx.annotation.StyleRes;
 import com.faendir.lightning_launcher.scriptlib.exception.FailureException;
 import com.faendir.lightning_launcher.scriptlib.exception.PermissionDeniedException;
 import com.faendir.lightning_launcher.scriptlib.exception.RepositoryImporterMissingException;

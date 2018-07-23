@@ -1,7 +1,7 @@
 package com.faendir.lightning_launcher.scriptlib;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 /**
  * Created on 18.06.2016.

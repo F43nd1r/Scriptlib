@@ -1,63 +1,87 @@
-apply plugin: 'com.android.library'
-
-ext {
-    bintrayRepo = 'maven'
-    bintrayName = 'scriptlib'
-
-    publishedGroupId = 'com.faendir.lightninglauncher'
-    libraryName = 'scriptlib'
-    artifact = 'scriptlib'
-
-    libraryDescription = 'Allows to import scripts directly into Lightning Launcher'
-
-    siteUrl = 'https://github.com/F43nd1r/Scriptlib'
-    gitUrl = 'https://github.com/F43nd1r/Scriptlib.git'
-
-    libraryVersion = "3.0-SNAPSHOT"
-    versionCode = 37
-    sdkVersion = 24
-    supportVersion = "24.2.1"
-
-    developerId = 'f43nd1r'
-    developerName = 'Lukas Morawietz'
-    developerEmail = 'support@faendir.com'
-
-    licenseName = 'The Apache Software License, Version 2.0'
-    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-    allLicenses = ["Apache-2.0"]
+plugins {
+    id 'com.android.library'
+    id 'digital.wup.android-maven-publish' version '3.6.2'
+    id 'com.jfrog.bintray' version '1.8.3'
+    id 'net.researchgate.release' version '2.7.0'
 }
 
 android {
-    compileSdkVersion sdkVersion
-    buildToolsVersion '25.0.0'
+    compileSdkVersion Integer.parseInt(androidTargetVersion)
 
     defaultConfig {
         minSdkVersion 8
-        targetSdkVersion sdkVersion
-        versionCode versionCode
-        versionName libraryVersion
+        targetSdkVersion androidTargetVersion
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_7
-        targetCompatibility JavaVersion.VERSION_1_7
-    }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 dependencies {
-    compile "com.android.support:support-annotations:$supportVersion"
-    compile 'org.apache.commons:commons-lang3:3.4'
+    implementation 'androidx.annotation:annotation:1.0.0-beta01'
+    implementation 'org.apache.commons:commons-lang3:3.7'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.android
+            groupId = 'com.faendir.lightninglauncher'
+            artifactId = 'scriptlib'
+            version = version
+            pom {
+                name = 'scriptlib'
+                description = 'Allows to import scripts directly into Lightning Launcher'
+                url = 'https://github.com/F43nd1r/Scriptlib'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'f43nd1r'
+                        name = 'Lukas Morawietz'
+                        email = 'support@faendir.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/F43nd1r/Scriptlib.git'
+                    developerConnection = 'scm:git:git@github.com:F43nd1r/Scriptlib.git'
+                    url = 'https://github.com/F43nd1r/Scriptlib'
+                }
+            }
+        }
+    }
+}
+
+bintray {
+    user = artifactoryUser
+    key = artifactoryApiKey
+    publications = ['maven']
+    pkg {
+        repo = 'maven'
+        afterEvaluate {
+            org.gradle.api.publish.maven.MavenPom pom = publishing.publications.maven.pom
+            name = pom.name.get()
+            websiteUrl = pom.url.get()
+            vcsUrl = pom.scm.url.get()
+            licenses = pom.licenses.collect { l -> l.name.get() }
+            desc = pom.description.get()
+        }
+        publicDownloadNumbers = true
+        version {
+            name = project.version
+        }
+    }
 }
 
 
-apply from: 'install.gradle'
-apply from: 'upload.gradle'
 
-/* how to upload: [terminal]
-* gradlew bintrayUpload
-*/
+release {
+    tagTemplate = '$name-$version'
+}
+
+
 
