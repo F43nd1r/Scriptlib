@@ -1,13 +1,7 @@
 .gradle
 /local.properties
-/.idea/workspace.xml
-/.idea/libraries
 .DS_Store
 /build
 /app
 /.idea
-.idea.bak/.name
-.idea.bak/copyright/profiles_settings.xml
-.idea.bak/compiler.xml
-.idea.bak/encodings.xml
-.idea.bak/gradle.xml
+**.iml
