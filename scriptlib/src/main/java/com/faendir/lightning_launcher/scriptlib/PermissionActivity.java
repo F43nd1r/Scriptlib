@@ -9,6 +9,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.ResultReceiver;
 import androidx.annotation.NonNull;
+import androidx.concurrent.futures.ResolvableFuture;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Created by Lukas on 17.11.2015.
@@ -19,14 +21,15 @@ public class PermissionActivity extends Activity {
     private static final String CALLBACK = "callback";
     private static final String PERMISSION = "permission";
 
-    public static void checkForPermission(@NonNull Context context, String permission, final PermissionCallback callback) {
+    public static ListenableFuture<Boolean> checkForPermission(@NonNull Context context, String permission) {
+        ResolvableFuture<Boolean> future = ResolvableFuture.create();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
                 Intent intent = new Intent(context, PermissionActivity.class);
                 intent.putExtra(CALLBACK, new ResultReceiver(null){
                     @Override
                     protected void onReceiveResult(int resultCode, Bundle resultData) {
-                        callback.handlePermissionResult(resultCode == PackageManager.PERMISSION_GRANTED);
+                        future.set(resultCode == PackageManager.PERMISSION_GRANTED);
                     }
                 });
                 intent.putExtra(PERMISSION, permission);
@@ -35,11 +38,12 @@ public class PermissionActivity extends Activity {
                 }
                 context.startActivity(intent);
             } else {
-                callback.handlePermissionResult(true);
+                future.set(true);
             }
         } else {
-            callback.handlePermissionResult(context.checkCallingOrSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
+            future.set(context.checkCallingOrSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
         }
+        return future;
     }
 
     private ResultReceiver callback;
@@ -66,9 +70,5 @@ public class PermissionActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         callback.send(grantResults[0], null);
         finish();
-    }
-
-    public interface PermissionCallback {
-        void handlePermissionResult(boolean isGranted);
     }
 }

@@ -1,1 +1,1 @@
-include ':scriptlib', ':app'
+include ':scriptlib'
