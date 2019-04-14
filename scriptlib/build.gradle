@@ -18,8 +18,8 @@ android {
     }
 }
 dependencies {
-    implementation 'androidx.annotation:annotation:1.1.0-alpha01'
-    implementation 'androidx.concurrent:concurrent-futures:1.0.0-alpha03'
+    implementation 'androidx.annotation:annotation:1.1.0-beta01'
+    implementation("com.google.guava:guava:27.1-android")
     implementation 'com.josesamuel:remoter-annotations:1.2.0'
     annotationProcessor 'com.josesamuel:remoter:1.2.0'
     implementation 'org.parceler:parceler-api:1.1.12'

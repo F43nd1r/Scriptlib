@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.faendir.lightning_launcher.scriptlib">
 
-    <uses-permission android:name="net.pierrox.lightning_launcher.USE_PLUGIN_SERVICE"/>
+    <uses-permission android:name="net.pierrox.lightning_launcher.USE_SCRIPT_SERVICE"/>
 
 
     <application

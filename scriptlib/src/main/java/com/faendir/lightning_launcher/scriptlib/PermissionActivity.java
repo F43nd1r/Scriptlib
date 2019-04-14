@@ -9,8 +9,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.ResultReceiver;
 import androidx.annotation.NonNull;
-import androidx.concurrent.futures.ResolvableFuture;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.FluentFuture;
+import com.google.common.util.concurrent.SettableFuture;
 
 /**
  * Created by Lukas on 17.11.2015.
@@ -21,8 +21,8 @@ public class PermissionActivity extends Activity {
     private static final String CALLBACK = "callback";
     private static final String PERMISSION = "permission";
 
-    public static ListenableFuture<Boolean> checkForPermission(@NonNull Context context, String permission) {
-        ResolvableFuture<Boolean> future = ResolvableFuture.create();
+    public static FluentFuture<Boolean> checkForPermission(@NonNull Context context, String permission) {
+        SettableFuture<Boolean> future = SettableFuture.create();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
                 Intent intent = new Intent(context, PermissionActivity.class);
@@ -43,7 +43,7 @@ public class PermissionActivity extends Activity {
         } else {
             future.set(context.checkCallingOrSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
         }
-        return future;
+        return FluentFuture.from(future);
     }
 
     private ResultReceiver callback;

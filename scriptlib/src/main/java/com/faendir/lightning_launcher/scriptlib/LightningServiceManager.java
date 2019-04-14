@@ -4,10 +4,14 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.os.IBinder;
 import androidx.annotation.NonNull;
-import androidx.concurrent.futures.ResolvableFuture;
+import com.google.common.util.concurrent.FluentFuture;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import net.pierrox.lightning_launcher.plugin.IScriptService;
 import net.pierrox.lightning_launcher.plugin.IScriptService_Proxy;
 
@@ -29,50 +33,68 @@ public class LightningServiceManager {
 		this.context = context;
 	}
 
-	public ListenableFuture<IScriptService> getPluginService() {
-		ResolvableFuture<IScriptService> future = ResolvableFuture.create();
+	public FluentFuture<IScriptService> getScriptService() {
+		SettableFuture<IScriptService> future = SettableFuture.create();
 		synchronized (lock) {
 			if (service != null) {
 				future.set(service);
 			} else if (connector != null) {
 				connector.addFuture(future);
 			} else {
-				connector = new Connector();
-				ListenableFuture<Boolean> permission = PermissionActivity.checkForPermission(context, IScriptService.PERMISSION);
-				permission.addListener(() -> {
+				Intent intent = new Intent();
+				intent.setClassName("net.pierrox.lightning_launcher_extreme", "net.pierrox.lightning_launcher.util.ScriptService");
+				ResolveInfo info = context.getPackageManager().resolveService(intent, 0);
+				if (info != null) {
 					try {
-						if (permission.get()) {
-							Intent intent = new Intent();
-							intent.setClassName("net.pierrox.lightning_launcher_extreme", "net.pierrox.net.pierrox.net.pierrox.lightning_launcher.util.PluginService");
-							connector.addFuture(future);
-							context.bindService(intent, connector, Context.BIND_AUTO_CREATE);
+						PackageInfo packageInfo = context.getPackageManager().getPackageInfo(info.serviceInfo.packageName, 0);
+						if(packageInfo.versionCode >= 328){
+							connector = new Connector();
+							ListenableFuture<Boolean> permission = PermissionActivity.checkForPermission(context, IScriptService.PERMISSION);
+							permission.addListener(() -> {
+								try {
+									if (permission.get()) {
+										connector.addFuture(future);
+										context.bindService(intent, connector, Context.BIND_AUTO_CREATE);
+									} else {
+										future.setException(new PermissionDeniedException());
+										synchronized (lock) {
+											connector = null;
+										}
+									}
+								} catch (ExecutionException e) {
+									e.printStackTrace();
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							}, Runnable::run);
 						} else {
-							future.setException(new PermissionDeniedException());
-							synchronized (lock) {
-								connector = null;
-							}
+							future.setException(new LauncherOutdatedException());
 						}
-					} catch (ExecutionException e) {
-						e.printStackTrace();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
+					} catch (PackageManager.NameNotFoundException e) {
+						future.setException(e);
 					}
-				}, Runnable::run);
+				} else {
+					future.setException(new LauncherOutdatedException());
+				}
 			}
 		}
-		return future;
+		return FluentFuture.from(future);
 	}
 
 	public void closeConnection() {
-		if (connector != null) {
-			context.unbindService(connector);
+		synchronized (lock) {
+			if (connector != null) {
+				context.unbindService(connector);
+				service = null;
+				connector = null;
+			}
 		}
 	}
 
 	private class Connector implements ServiceConnection {
-		private final List<ResolvableFuture<IScriptService>> futures = new ArrayList<>();
+		private final List<SettableFuture<IScriptService>> futures = new ArrayList<>();
 
-		public void addFuture(ResolvableFuture<IScriptService> future) {
+		public void addFuture(SettableFuture<IScriptService> future) {
 			futures.add(future);
 		}
 
@@ -80,7 +102,7 @@ public class LightningServiceManager {
 		public void onServiceConnected(ComponentName name, IBinder binder) {
 			synchronized (lock) {
 				service = new IScriptService_Proxy(binder);
-				for (ResolvableFuture<IScriptService> future : futures) {
+				for (SettableFuture<IScriptService> future : futures) {
 					future.set(service);
 				}
 			}
