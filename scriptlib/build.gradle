@@ -22,7 +22,7 @@ dependencies {
     implementation("com.google.guava:guava:27.1-android")
     implementation 'com.josesamuel:remoter-annotations:1.2.0'
     annotationProcessor 'com.josesamuel:remoter:1.2.0'
-    implementation 'org.parceler:parceler-api:1.1.12'
+    api 'org.parceler:parceler-api:1.1.12'
     annotationProcessor 'org.parceler:parceler:1.1.12'
 }
 
